@@ -8,3 +8,4 @@ function(add_compute_test TEST_NAME TEST_SOURCE)
 endfunction()
 
 add_subdirectory(chains)
+add_subdirectory(hamiltonian)
