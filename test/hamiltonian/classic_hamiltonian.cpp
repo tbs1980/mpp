@@ -10,8 +10,7 @@
 #include <mpp/dists/multivariate_normal.hpp>
 
 template<typename real_scalar_type>
-void test_classic_hamiltonian(std::string const & chn_file_name)
-{
+void test_classic_hamiltonian(std::string const & chn_file_name) {
     using namespace mpp::hamiltonian;
     using namespace mpp::chains;
     using namespace mpp::dists;
@@ -29,8 +28,7 @@ void test_classic_hamiltonian(std::string const & chn_file_name)
     size_t const num_dims(10);
     real_vector_type mean(num_dims);
     real_vector_type var(num_dims);
-    for(size_t i=0;i<num_dims;++i)
-    {
+    for(size_t i=0;i<num_dims;++i) {
         mean(i) = real_scalar_type(0);
         var(i) = real_scalar_type(1);
     }
@@ -44,8 +42,7 @@ void test_classic_hamiltonian(std::string const & chn_file_name)
     size_t const max_num_steps(10);
     real_scalar_type const max_eps(1);
     real_vector_type inv_mass_mat(num_dims);
-    for(size_t i=0;i<num_dims;++i)
-    {
+    for(size_t i=0;i<num_dims;++i) {
         inv_mass_mat(i) = real_scalar_type(1);
     }
 
@@ -62,8 +59,7 @@ void test_classic_hamiltonian(std::string const & chn_file_name)
     rng_type rng;
     normal_distribution_type nrm_dist;
     real_vector_type q_0(num_dims);
-    for(size_t i=0;i<num_dims;++i)
-    {
+    for(size_t i=0;i<num_dims;++i) {
         q_0(i) = nrm_dist(rng);
     }
     chain_type chn = hmc_spr.run_sampler(num_samples,q_0);
@@ -71,8 +67,7 @@ void test_classic_hamiltonian(std::string const & chn_file_name)
 
 }
 
-BOOST_AUTO_TEST_CASE(classic_hamiltonian)
-{
+BOOST_AUTO_TEST_CASE(classic_hamiltonian) {
     test_classic_hamiltonian<float>(std::string("float.chain"));
     test_classic_hamiltonian<double>(std::string("double.chain"));
     test_classic_hamiltonian<long double>(std::string("long-double.chain"));
