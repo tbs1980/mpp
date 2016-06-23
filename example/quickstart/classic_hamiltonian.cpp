@@ -25,7 +25,7 @@ vector<double> grad_log_posterior(vector<double> const & q) {
 }
 
 int main() {
-    std::size_t const num_dims(1000);
+    std::size_t const num_dims(10);
     std::size_t const max_num_steps(10);
     double const max_eps(1);
     vector<double> inv_mass_mat(num_dims);

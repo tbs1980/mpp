@@ -28,10 +28,10 @@ public:
     typedef mpp::hamiltonian::multivariate_normal<
         real_scalar_type> kinetic_energy_type;
 
-    typedef typename std::function< 
+    typedef typename std::function<
         real_scalar_type (real_vector_type const &) > log_post_func_type;
 
-    typedef typename std::function< 
+    typedef typename std::function<
         real_vector_type (real_vector_type const &)> grad_log_post_func_type;
 
     static_assert(
@@ -83,7 +83,7 @@ public:
             "max_num_steps too big. Please modify the config.hpp and recompile."
         );
 
-        if( m_max_eps <= real_scalar_type(0) 
+        if( m_max_eps <= real_scalar_type(0)
             or m_max_eps > real_scalar_type(1)) {
             std::stringstream msg;
             msg << "Maximum value of epsilon = "
@@ -134,7 +134,7 @@ public:
                 q_1 = q_0;
                 hmc_chain.set_sample(num_accepted,q_1,log_post_val);
                 ++num_accepted;
-            } 
+            }
             else {
                 ++num_rejected;
             }
@@ -177,27 +177,15 @@ private:
 
         real_vector_type dq = grad_log_posterior(q);
         real_vector_type dp = kin_eng.grad_log_posterior(p);
-        size_t const num_dims = p.size();
 
-        for(size_t i=0;i<num_dims;++i) {
-            p(i) = p(i) + real_scalar_type(0.5)*eps*dq(i);
-        }
-
+        p += 0.5*eps*dq;
         for(size_t j=0;j<num_steps;++j) {
             dp = kin_eng.grad_log_posterior(p);
-            for(size_t i=0;i<num_dims;++i) {
-                q(i) = q(i) - eps*dp(i);
-            }
+            q -= eps*dp;
             dq = grad_log_posterior(q);
-            for(size_t i=0;i<num_dims;++i) {
-                p(i) = p(i) + eps*dq(i);
-            }
+            p += eps*dq;
         }
-
-        for(size_t i=0;i<num_dims;++i) {
-            p(i) = p(i) - real_scalar_type(0.5)*eps*dq(i);
-        }
-
+        p -= 0.5*eps*dq;
     }
 
     log_post_func_type m_log_posterior;
