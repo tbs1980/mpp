@@ -143,8 +143,8 @@ public:
                     );
                     real_scalar_type u_rand = uni_real_dist(rng);
                     real_scalar_type z_val
-                        = (u_rand*(m_scale_a -1.)+1.)*(u_rand*(m_scale_a -1.)+1.)
-                            /m_scale_a;
+                        = (u_rand*(m_scale_a -1.)+1.)
+                            *(u_rand*(m_scale_a -1.)+1.)/m_scale_a;
                     matrix_row<real_matrix_type> X_k(
                         ensbl_S,
                         wkr_k
@@ -153,7 +153,7 @@ public:
                     real_vector_type prop_Y = X_j + z_val*(X_k - X_j);
                     real_scalar_type lp_prop_Y = m_log_posterior(prop_Y);
                     real_scalar_type log_ratio_q
-                        = m_num_dims*std::log(z_val)*(lp_prop_Y - lp_X_k);
+                        = (m_num_dims-1)*std::log(z_val) + lp_prop_Y - lp_X_k;
                     real_scalar_type log_uni_r = std::log(uni_real_dist(rng));
                     if(log_uni_r <=  log_ratio_q*m_beta) {
                         X_k = prop_Y;

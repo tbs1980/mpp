@@ -51,7 +51,7 @@ void test_red_blue(std::string const & chn_file_name) {
         scale_a
     );
 
-    size_t const num_samples(100000);
+    size_t const num_samples(1000);
     rng_type rng;
     normal_distribution_type nrm_dist;
     real_matrix_type start_ensemble(num_walkers,num_dims);
@@ -67,6 +67,6 @@ void test_red_blue(std::string const & chn_file_name) {
 
 BOOST_AUTO_TEST_CASE(classic_hamiltonian) {
     test_red_blue<float>(std::string("float.chain"));
-    // test_red_blue<double>(std::string("double.chain"));
-    // test_red_blue<long double>(std::string("long-double.chain"));
+    test_red_blue<double>(std::string("double.chain"));
+    test_red_blue<long double>(std::string("long-double.chain"));
 }
