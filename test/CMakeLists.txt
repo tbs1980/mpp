@@ -9,3 +9,4 @@ endfunction()
 
 add_subdirectory(chains)
 add_subdirectory(hamiltonian)
+add_subdirectory(ensemble)
