@@ -53,7 +53,7 @@ int main() {
     for(size_t i=0;i<num_dims;++i) {
         q_0(i) = nrm_dist(rng);
     }
-    mcmc_chain<double> chn = hmc_spr.run_sampler(num_samples,q_0);
+    mcmc_chain<double> chn = hmc_spr.run_sampler(num_samples,q_0,rng);
     std::string chn_file_name("./eg_classic_hmc.chain");
     chn.write_samples_to_csv(chn_file_name);
 

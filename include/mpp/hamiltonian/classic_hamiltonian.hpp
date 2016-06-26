@@ -22,7 +22,6 @@ class hmc_sampler
 public:
     typedef boost::numeric::ublas::vector<real_scalar_type> real_vector_type;
     typedef mpp::chains::mcmc_chain<real_scalar_type> chain_type;
-    typedef std::mt19937 rng_type;
     typedef std::uniform_real_distribution<real_scalar_type> uni_real_dist_type;
     typedef std::uniform_int_distribution<size_t> uni_int_dist_type;
     typedef mpp::hamiltonian::multivariate_normal<
@@ -95,8 +94,11 @@ public:
 
     }
 
+    template<class rng_type>
     chain_type run_sampler(size_t const num_samples,
-        real_vector_type const & start_point) throw() {
+        real_vector_type const & start_point,
+        rng_type & rng
+    ) throw() {
         BOOST_ASSERT_MSG(
             num_samples <=
                 size_t(MPP_MAXIMUM_NUMBER_OF_SAMPLES_PER_RUN_SAMPLER_CALL),
@@ -112,9 +114,9 @@ public:
         size_t num_rejected(0);
         while( num_accepted < num_samples ) {
             real_vector_type q_0(q_1);
-            real_scalar_type const eps = m_max_eps*uni_real_dist(m_rng);
-            size_t const num_steps = uni_int_dist(m_rng);
-            real_vector_type p_0 = kin_eng.generate_sample(m_rng);
+            real_scalar_type const eps = m_max_eps*uni_real_dist(rng);
+            size_t const num_steps = uni_int_dist(rng);
+            real_vector_type p_0 = kin_eng.generate_sample(rng);
 
             real_scalar_type const h_0 = -m_log_posterior(q_0)
                 -kin_eng.log_posterior(p_0);
@@ -129,7 +131,7 @@ public:
                 msg << "delta(H) value is not finite";
                 throw std::out_of_range(msg.str());
             }
-            real_scalar_type const uni_rand = uni_real_dist(m_rng);
+            real_scalar_type const uni_rand = uni_real_dist(rng);
             if(std::log(uni_rand) < -delta_h*m_beta) {
                 q_1 = q_0;
                 hmc_chain.set_sample(num_accepted,q_1,log_post_val);
@@ -194,7 +196,6 @@ private:
     size_t m_max_num_steps;
     real_scalar_type m_max_eps;
     real_vector_type m_inv_mass_mat;
-    rng_type m_rng;
     real_scalar_type m_beta;
     real_scalar_type m_acc_rate;
 };

@@ -91,7 +91,7 @@ public:
         }
     }
 
-    template<typename rng_type>
+    template<class rng_type>
     chain_type run_sampler(
         size_t const num_samples,
         real_matrix_type const & start_points,
@@ -134,7 +134,7 @@ public:
             for(std::size_t half_i = 0; half_i < 2; ++ half_i){
                 std::size_t compl_i = half_i == 0 ? half_walkers : 0 ;
                 std::size_t wkr_start = half_i == 0 ? 0 : half_walkers;
-                std::size_t wkr_end = half_i == 0 ? half_walkers : m_num_walkers ;
+                std::size_t wkr_end = half_i == 0 ?half_walkers :m_num_walkers;
 
                 for(std::size_t wkr_k = wkr_start; wkr_k < wkr_end; ++wkr_k){
                     matrix_row<real_matrix_type> X_j(

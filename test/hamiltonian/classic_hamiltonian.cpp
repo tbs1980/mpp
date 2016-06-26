@@ -62,7 +62,7 @@ void test_classic_hamiltonian(std::string const & chn_file_name) {
     for(size_t i=0;i<num_dims;++i) {
         q_0(i) = nrm_dist(rng);
     }
-    chain_type chn = hmc_spr.run_sampler(num_samples,q_0);
+    chain_type chn = hmc_spr.run_sampler(num_samples,q_0,rng);
     chn.write_samples_to_csv(chn_file_name);
 
 }
