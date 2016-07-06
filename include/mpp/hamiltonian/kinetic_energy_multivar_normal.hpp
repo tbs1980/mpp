@@ -18,7 +18,7 @@ public:
     typedef boost::numeric::ublas::vector<real_scalar_type> real_vector_type;
     typedef std::normal_distribution<real_scalar_type> normal_distribution_type;
 
-    explicit multivariate_normal(real_vector_type const & sigma_inv) throw()
+    explicit multivariate_normal(real_vector_type const & sigma_inv)
     :m_sigma_inv(sigma_inv) {
         if( sigma_inv.size() == std::size_t(0)) {
             std::stringstream msg;

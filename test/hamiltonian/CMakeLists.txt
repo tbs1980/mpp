@@ -6,3 +6,7 @@ add_compute_test(
     "hamiltonian.classic_hamiltonian"
     classic_hamiltonian.cpp
 )
+add_compute_test(
+    "hamiltonian.nuts"
+    nuts.cpp
+)

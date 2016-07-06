@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <cmath>
 #include <functional>
+#include <cstddef>
 #include <boost/numeric/ublas/vector.hpp>
 #include <boost/assert.hpp>
 #include <mpp/config.hpp>
@@ -45,7 +46,7 @@ public:
         size_t const max_num_steps,
         real_scalar_type const max_eps,
         real_vector_type const & inv_mass_mat
-    ) throw()
+    )
     : m_log_posterior(log_posterior)
     , m_grad_log_posterior(grad_log_posterior)
     , m_num_dims(num_dims)
@@ -98,7 +99,7 @@ public:
     chain_type run_sampler(size_t const num_samples,
         real_vector_type const & start_point,
         rng_type & rng
-    ) throw() {
+    ) {
         BOOST_ASSERT_MSG(
             num_samples <=
                 size_t(MPP_MAXIMUM_NUMBER_OF_SAMPLES_PER_RUN_SAMPLER_CALL),
@@ -152,8 +153,6 @@ public:
         return m_acc_rate;
     }
 
-private:
-
     static void leap_frog(
         grad_log_post_func_type & grad_log_posterior,
         kinetic_energy_type & kin_eng,
@@ -190,6 +189,7 @@ private:
         p -= 0.5*eps*dq;
     }
 
+private:
     log_post_func_type m_log_posterior;
     grad_log_post_func_type m_grad_log_posterior;
     size_t m_num_dims;
