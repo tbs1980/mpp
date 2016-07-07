@@ -48,15 +48,22 @@ void test_nuts(std::string const & chn_file_name) {
     std::size_t const num_samples(100);
     rng_t rng;
     normal_distribution_t nrm_dist;
-    real_vector_t q_0(num_dims);
+    real_vector_t theta_0(num_dims);
     for(std::size_t i=0;i<num_dims;++i) {
-        q_0(i) = nrm_dist(rng);
+        theta_0(i) = nrm_dist(rng);
     }
-    chain_t chn = nuts_spr.run_sampler(num_samples,q_0,rng);
+    real_scalar_t res_eps = nuts_spr.find_reasonable_epsilon(
+        log_posterior,
+        grad_log_posterior,
+        theta_0,
+        rng
+    );
+    std::cout<<"realsonable epsilon = " << res_eps << std::endl;
+    chain_t chn = nuts_spr.run_sampler(num_samples,theta_0,rng);
 }
 
 BOOST_AUTO_TEST_CASE(nuts) {
     test_nuts<float>(std::string("float.chain"));
-    test_nuts<double>(std::string("double.chain"));
-    test_nuts<long double>(std::string("long-double.chain"));
+    // test_nuts<double>(std::string("double.chain"));
+    // test_nuts<long double>(std::string("long-double.chain"));
 }

@@ -105,6 +105,14 @@ public:
                 size_t(MPP_MAXIMUM_NUMBER_OF_SAMPLES_PER_RUN_SAMPLER_CALL),
             "num_samples too big. Please modify the config and recompile."
         );
+        if( start_point.size() !=  m_num_dims){
+            std::stringstream msg;
+            msg << "The number of dimensions = "
+                << m_num_dims
+                << " is not equal to the length of start_point = "
+                << start_point.size();
+            throw std::length_error(msg.str());
+        }
 
         chain_type hmc_chain(num_samples,m_num_dims);
         uni_real_dist_type uni_real_dist;
