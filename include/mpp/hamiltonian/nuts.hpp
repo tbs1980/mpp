@@ -14,7 +14,6 @@
 #include "../config.hpp"
 #include "../chains/mcmc_chain.hpp"
 #include "classic_hamiltonian.hpp"
-#include "kinetic_energy_multivar_normal.hpp"
 
 namespace mpp { namespace hamiltonian {
 
@@ -106,7 +105,7 @@ public:
             }
             real_scalar_t const nrm2_r = inner_prod(r_0,r_0);
             real_scalar_t joint = log_p - 0.5*nrm2_r;
-            real_scalar_t logu = joint - exp_dist(rng);
+            real_scalar_t log_u = joint - exp_dist(rng);
 
             real_vector_t theta_minus(theta_0);
             real_vector_t theta_plus(theta_0);
@@ -170,31 +169,139 @@ public:
         return hmc_chain;
     }
 
+    template<class rng_t>
     void build_tree(
-        real_vector_t & theta_pm,
-        real_vector_t & r_pm,
-        real_vector_t & grad_pm,
-        real_vector_t & theta_prime,
-        real_vector_t & grad_prime,
-        std::size_t & n_prine,
-        std::size_t & s_prime,
-        real_scalar_t & alpha_prime,
-        std::size_t & n_alpha_prime,
+        std::size_t const j,
+        int const dir_v,
         real_vector_t & theta,
         real_vector_t & r,
-        real_vector_t & grad,
-        real_scalar_t & log_u,
-        int & v,
-        std::size_t & j,
-        real_scalar_t & epsilon,
-        log_post_func_t & log_posterior,
-        grad_log_post_func_t & grad_log_posterior,
-        real_scalar_t & joint_0
+        real_scalar_t const epsilon,
+        real_scalar_t const log_u,
+        std::size_t & n_prm,
+        std::size_t & s_prm,
+        real_scalar_t & alpha_prm,
+        std::size_t & n_alpha_prm,
+        real_vector_t & theta_plus,
+        real_vector_t & r_plus,
+        real_vector_t & theta_minus,
+        real_vector_t & r_minus,
+        real_vector_t & theta_prm,
+        rng_t & rng
     ){
-        if (j ==0 ){
-            theta_prime = theta,
-            real_vector_t r_prime(r);
+        BOOST_ASSERT(j >= 0);
 
+        real_scalar_t const delta_max = 1000.;
+        real_scalar_t log_p = m_log_posterior(theta);
+        real_scalar_t nrm2_r = inner_prod(r, r);
+        real_scalar_t joint = log_p - 0.5*inner_prod(r, r);
+        uni_real_dist_t uni_real_dist(0.,1.);
+
+        if (j ==0 ){
+            leap_frog(m_grad_log_posterior, theta, r, dir_v*epsilon);
+            real_scalar_t log_p_prm = m_log_posterior(theta);
+            real_scalar_t nrm2_r_prm = inner_prod(r, r);
+            real_scalar_t joint_prm = log_p_prm - 0.5*nrm2_r_prm;
+
+            n_prm = log_u < joint_prm ? 1 : 0;
+            s_prm = log_u - delta_max < joint_prm ? 1 : 0;
+            alpha_prm = std::min(1, std::exp(log_p_prm - log_p) );
+            n_alpha_prm = 1;
+
+            theta_plus = theta;
+            r_plus = r;
+            theta_minus = theta;
+            r_minus = r;
+            theta_prm = theta;
+        }
+        else {
+            build_tree(
+                j - 1,
+                dir_v,
+                theta,
+                r,
+                epsilon,
+                log_u,
+                n_prm,
+                s_prm,
+                alpha_prm,
+                n_alpha_prm,
+                theta_plus,
+                r_plus,
+                theta_minus,
+                r_minus,
+                theta_prm,
+                rng
+            );
+            if( s_prm == 1) {
+                std::size_t n_prm_2(0);
+                std::size_t s_prm_2(0);
+                real_scalar_t alpha_prm_2(0);
+                std::size_t n_alpha_prm_2(0);
+                real_vector_t theta_prm_2(theta_prm.size());
+
+                if( dir_v == -1) {
+                    real_vector_t theta_plus_temp(theta_plus);
+                    real_vector_t r_plus_temp(r_plus);
+                    build_tree(
+                        j - 1,
+                        dir_v,
+                        theta_minus,
+                        r_minus,
+                        epsilon,
+                        log_u,
+                        n_prm_2,
+                        s_prm_2,
+                        alpha_prm_2,
+                        n_alpha_prm_2,
+                        theta_plus_temp,
+                        r_plus_temp,
+                        theta_minus,
+                        r_minus,
+                        theta_prm_2,
+                        rng
+                    );
+                }
+                else {
+                    real_vector_t theta_minus_temp(theta_plus);
+                    real_vector_t r_minus_temp(r_plus);
+                    build_tree(
+                        j - 1,
+                        dir_v,
+                        theta_plus,
+                        r_plus,
+                        epsilon,
+                        log_u,
+                        n_prm_2,
+                        s_prm_2,
+                        alpha_prm_2,
+                        n_alpha_prm_2,
+                        theta_plus,
+                        r_plus,
+                        theta_minus_temp,
+                        r_minus_temp,
+                        theta_prm_2,
+                        rng
+                    );
+                }
+                if( uni_real_dist(rng) < n_prm_2 / (n_prm + n_prm_2) ) {
+                    theta_prm = theta_prm_2;
+                }
+                n_prm += n_prm_2;
+                if(
+                    s_prm == 1
+                    and s_prm_2 == 1
+                    and stop_criterion(
+                        theta_plus,
+                        theta_minus,
+                        r_minus,
+                        r_plus
+                    )
+                ){
+                    s_prm = 1;
+                }
+                alpha_prm += alpha_prm_2;
+                n_alpha_prm += n_alpha_prm_2;
+            }
         }
     }
 
