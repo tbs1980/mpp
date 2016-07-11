@@ -11,39 +11,37 @@
 namespace mpp{ namespace chains{
 
 template<class real_scalar_type>
-class mcmc_chain
-{
+class mcmc_chain {
 public:
     typedef boost::numeric::ublas::vector<real_scalar_type> real_vector_type;
     typedef boost::numeric::ublas::matrix<real_scalar_type> real_matrix_type;
 
-    mcmc_chain(size_t const num_samples,size_t const num_dims)
-    :m_num_dims(num_dims),m_num_samples(num_samples)
-    ,m_chain(num_samples,num_dims),m_weights(num_samples)
-    {
+    mcmc_chain(size_t const num_samples, size_t const num_dims)
+    : m_num_dims(num_dims)
+    , m_num_samples(num_samples)
+    , m_chain(num_samples, num_dims)
+    , m_weights(num_samples) {
     }
 
-    inline void set_sample(size_t sample_id,
+    inline void set_sample(std::size_t const sample_id,
         real_vector_type const & sample,
         real_scalar_type const weight
-    )
-    {
+    ) {
+        std::cout<<" sample_id = "<< sample_id << std::endl;
+        BOOST_ASSERT(sample_id < m_num_samples );
         boost::numeric::ublas::row(m_chain,sample_id) = sample;
         m_weights(sample_id) = weight;
     }
 
-    inline real_matrix_type const & get_samples() const
-    {
+    inline real_matrix_type const & get_samples() const {
         return m_chain;
     }
 
-    inline real_vector_type const & get_weights() const
-    {
+    inline real_vector_type const & get_weights() const {
         return m_weights;
     }
 
-    void write_samples_to_csv(std::string const & file_name) const
-    {
+    void write_samples_to_csv(std::string const & file_name) const {
         std::string delimiter(",");
         std::ofstream out_file;
         out_file.open(file_name,std::ios::trunc);

@@ -60,6 +60,7 @@ void test_nuts(std::string const & chn_file_name) {
     );
     std::cout<<"realsonable epsilon = " << res_eps << std::endl;
     chain_t chn = nuts_spr.run_sampler(num_samples,theta_0,rng);
+    chn.write_samples_to_csv(chn_file_name);
 }
 
 BOOST_AUTO_TEST_CASE(nuts) {
