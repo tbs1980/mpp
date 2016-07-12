@@ -88,17 +88,21 @@ public:
         real_scalar_t mu(std::log(10*epsilon));
         real_scalar_t epsilon_bar(1.);
         real_scalar_t H_bar(0.);
-        std::size_t const M(num_samples);
+        // std::size_t const M(num_samples);
         std::size_t const M_adapt(0.5*num_samples);
         real_scalar_t log_p(m_log_posterior(theta_0));
         real_vector_t grad_0(m_grad_log_posterior(theta_0));
         std::size_t m(1);
-        hmc_chain.set_sample(m-1,theta_0,log_p);
+        // hmc_chain.set_sample(m-1,theta_0,log_p);
 
         normal_dist_t nrm_dist(0.,1.);
         exp_dist_t exp_dist(1.);
         uni_real_dist_t uni_real_dist(0.,1.);
-        for(m = 2; m <= M+M_adapt; ++m){
+        std::size_t num_accepted(0);
+        // std::size_t num_rejected(0);
+        // for(m = 2; m <= M+M_adapt; ++m){
+        while( num_accepted < num_samples ) {
+            ++m;
             real_vector_t r_0(m_num_dims);
             for(std::size_t ind_i = 0; ind_i < m_num_dims; ++ind_i) {
                 r_0(ind_i) = nrm_dist(rng);
@@ -170,8 +174,12 @@ public:
                     && uni_real_dist(rng)
                         < (real_scalar_t)n_prm / (real_scalar_t)n
                 ){
-                    real_scalar_t const log_p_prm = m_log_posterior(theta_prm);
-                    hmc_chain.set_sample(m-1,theta_prm,log_p_prm);
+                    if (m > M_adapt) {
+                        real_scalar_t const log_p_prm
+                            = m_log_posterior(theta_prm);
+                        hmc_chain.set_sample(num_accepted,theta_prm,log_p_prm);
+                        ++ num_accepted;
+                    }
                 }
                 n += n_prm;
                 if (

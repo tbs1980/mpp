@@ -52,19 +52,19 @@ void test_nuts(std::string const & chn_file_name) {
     for(std::size_t i=0;i<num_dims;++i) {
         theta_0(i) = nrm_dist(rng);
     }
-    real_scalar_t res_eps = nuts_spr.find_reasonable_epsilon(
-        log_posterior,
-        grad_log_posterior,
-        theta_0,
-        rng
-    );
-    std::cout<<"realsonable epsilon = " << res_eps << std::endl;
+    // real_scalar_t res_eps = nuts_spr.find_reasonable_epsilon(
+    //     log_posterior,
+    //     grad_log_posterior,
+    //     theta_0,
+    //     rng
+    // );
+    // std::cout<<"realsonable epsilon = " << res_eps << std::endl;
     chain_t chn = nuts_spr.run_sampler(num_samples,theta_0,rng);
     chn.write_samples_to_csv(chn_file_name);
 }
 
 BOOST_AUTO_TEST_CASE(nuts) {
     test_nuts<float>(std::string("float.chain"));
-    // test_nuts<double>(std::string("double.chain"));
-    // test_nuts<long double>(std::string("long-double.chain"));
+    test_nuts<double>(std::string("double.chain"));
+    test_nuts<long double>(std::string("long-double.chain"));
 }

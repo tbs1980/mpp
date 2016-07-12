@@ -27,7 +27,6 @@ public:
         real_vector_type const & sample,
         real_scalar_type const weight
     ) {
-        std::cout<<" sample_id = "<< sample_id << std::endl;
         BOOST_ASSERT(sample_id < m_num_samples );
         boost::numeric::ublas::row(m_chain,sample_id) = sample;
         m_weights(sample_id) = weight;

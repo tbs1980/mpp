@@ -54,7 +54,7 @@ public:
     , m_max_eps(max_eps)
     , m_inv_mass_mat(inv_mass_mat)
     , m_beta(1)
-    ,m_acc_rate(0) {
+    , m_acc_rate(0) {
 
         if( m_num_dims == size_t(0) ) {
             std::stringstream msg;
