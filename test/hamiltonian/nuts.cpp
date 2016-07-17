@@ -25,7 +25,7 @@ void test_nuts(std::string const & chn_file_name) {
     typedef std::normal_distribution<real_scalar_t> normal_distribution_t;
     typedef mcmc_chain<real_scalar_t> chain_t;
 
-    std::size_t const num_dims(1000);
+    std::size_t const num_dims(507);
     real_vector_t mean(num_dims);
     real_vector_t var(num_dims);
     for(size_t i=0;i<num_dims;++i) {
@@ -45,7 +45,7 @@ void test_nuts(std::string const & chn_file_name) {
         num_dims,
         delta
     );
-    std::size_t const num_samples(100);
+    std::size_t const num_samples(1000);
     rng_t rng;
     normal_distribution_t nrm_dist;
     real_vector_t theta_0(num_dims);
