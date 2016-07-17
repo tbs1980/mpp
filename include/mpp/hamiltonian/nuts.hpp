@@ -82,6 +82,7 @@ public:
             theta_0,
             rng
         );
+        std::cout<< "--> Reasonable epsilon = " << epsilon << std::endl;
         real_scalar_t const gamma(0.5);
         std::size_t const t_0(10);
         real_scalar_t const kappa(0.75);
@@ -89,7 +90,7 @@ public:
         real_scalar_t epsilon_bar(1.);
         real_scalar_t H_bar(0.);
         // std::size_t const M(num_samples);
-        std::size_t const M_adapt(0.5*num_samples);
+        std::size_t const M_adapt(num_samples);
         real_scalar_t log_p(m_log_posterior(theta_0));
         real_vector_t grad_0(m_grad_log_posterior(theta_0));
         std::size_t m(1);
@@ -209,6 +210,8 @@ public:
                 epsilon_bar = std::exp(
                     (1. - eta)*std::log(epsilon_bar) + eta*std::log(epsilon)
                 );
+                std::cout << "--> Epsilon =  : " << epsilon
+                    << " and Epsilong_bar = " << epsilon_bar << std::endl;
             }
             else {
                 epsilon = epsilon_bar;
@@ -393,15 +396,16 @@ public:
         );
         using namespace boost::numeric::ublas;
         std::size_t const num_dims = theta_0.size();
-        real_scalar_t log_p_0 = log_posterior(theta_0);
+        real_scalar_t const log_p_0 = log_posterior(theta_0);
         real_vector_t theta_prm(theta_0);
         real_scalar_t epsilon = 1.;
-        real_vector_t r_prm(num_dims);
+        real_vector_t r_0(num_dims);
         normal_dist_t nrm_dist;
         for(std::size_t ind_i = 0; ind_i < num_dims; ++ind_i) {
-            r_prm(ind_i) = nrm_dist(rng);
+            r_0(ind_i) = nrm_dist(rng);
         }
-        real_scalar_t nrm_r2 = inner_prod(r_prm,r_prm);
+        real_scalar_t const nrm_r2 = inner_prod(r_0,r_0);
+        real_vector_t r_prm(r_0);
         leap_frog(
             grad_log_posterior,
             theta_prm,
@@ -420,10 +424,12 @@ public:
         real_scalar_t func_I_val = acc_prob > 0.5 ? 1. : 0.;
         real_scalar_t a = 2.*func_I_val - 1.;
 
-        log_p_0 = log_p_prm;
-        nrm_r2 = nrm_r2_prm;
+        // log_p_0 = log_p_prm;
+        // nrm_r2 = nrm_r2_prm;
         while( std::pow(acc_prob,a) > std::pow(2.,-a) ){
             epsilon = epsilon*std::pow(2.,a);
+            theta_prm = theta_0;
+            r_prm = r_0;
             leap_frog(
                 grad_log_posterior,
                 theta_prm,

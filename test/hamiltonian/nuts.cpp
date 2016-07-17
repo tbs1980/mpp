@@ -25,7 +25,7 @@ void test_nuts(std::string const & chn_file_name) {
     typedef std::normal_distribution<real_scalar_t> normal_distribution_t;
     typedef mcmc_chain<real_scalar_t> chain_t;
 
-    std::size_t const num_dims(10);
+    std::size_t const num_dims(1000);
     real_vector_t mean(num_dims);
     real_vector_t var(num_dims);
     for(size_t i=0;i<num_dims;++i) {
@@ -65,6 +65,6 @@ void test_nuts(std::string const & chn_file_name) {
 
 BOOST_AUTO_TEST_CASE(nuts) {
     test_nuts<float>(std::string("float.chain"));
-    test_nuts<double>(std::string("double.chain"));
-    test_nuts<long double>(std::string("long-double.chain"));
+    // test_nuts<double>(std::string("double.chain"));
+    // test_nuts<long double>(std::string("long-double.chain"));
 }
