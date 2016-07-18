@@ -58,7 +58,7 @@ public:
     template<class rng_t>
     chain_t run_sampler(
         std::size_t const num_samples,
-        real_vector_t const & theta_0,
+        real_vector_t const & start_point,
         rng_t & rng
     ) {
         BOOST_ASSERT_MSG(
@@ -66,14 +66,16 @@ public:
                 size_t(MPP_MAXIMUM_NUMBER_OF_SAMPLES_PER_RUN_SAMPLER_CALL),
             "num_samples too big. Please modify the config and recompile."
         );
-        if( theta_0.size() !=  m_num_dims){
+        if( start_point.size() !=  m_num_dims){
             std::stringstream msg;
             msg << "The number of dimensions = "
                 << m_num_dims
-                << " is not equal to the length of theta_0 = "
-                << theta_0.size();
+                << " is not equal to the length of start_point = "
+                << start_point.size();
             throw std::length_error(msg.str());
         }
+
+        real_vector_t theta_0(start_point);
 
         chain_t hmc_chain(num_samples,m_num_dims);
 
@@ -89,7 +91,7 @@ public:
             rng
         );
         std::cout<< "--> Reasonable epsilon = " << epsilon << std::endl;
-        real_scalar_t const gamma = 0.5;
+        real_scalar_t const gamma = 0.05;
         std::size_t const t_0 = 10;
         real_scalar_t const kappa = 0.75;
         real_scalar_t mu = std::log(10*epsilon);
@@ -196,6 +198,7 @@ public:
                     and uni_real_dist(rng)
                         < (real_scalar_t)n_prm / (real_scalar_t)n
                 ){
+                    theta_0 = theta_prm;
                     log_p = log_p_prm;
                     grad = grad_prm;
                     if (m > M_adapt) {
@@ -226,7 +229,7 @@ public:
             real_scalar_t eta = 1./(real_scalar_t)(m-1 + t_0);
             H_bar = (1. - eta)*H_bar
                 + eta*(m_delta - alpha/(real_scalar_t)n_alpha);
-            if ( m <= M_adapt){
+            if ( m <= M_adapt ){
                 epsilon = std::exp(
                     mu - std::sqrt( (real_scalar_t)(m-1) )/gamma*H_bar
                 );
@@ -257,15 +260,19 @@ public:
         std::size_t const j,
         real_scalar_t const epsilon,
         real_scalar_t const joint_0,
+
         real_vector_t & theta_minus,
         real_vector_t & r_minus,
         real_vector_t & grad_minus,
+
         real_vector_t & theta_plus,
         real_vector_t & r_plus,
         real_vector_t & grad_plus,
+
         real_vector_t & theta_prm,
         real_vector_t & grad_prm,
         real_scalar_t & log_p_prm,
+
         std::size_t & n_prm,
         std::size_t & s_prm,
         real_scalar_t & alpha_prm,
@@ -296,10 +303,14 @@ public:
             real_scalar_t const joint = log_p_prm - 0.5*nrm2_r_prm;
             n_prm = log_u < joint ? 1 : 0;
             s_prm = log_u - delta_max < joint ? 1 : 0;
-            theta_plus = theta_prm;
+
             theta_minus = theta_prm;
+            theta_plus = theta_prm;
             r_minus = r_prm;
             r_plus = r_prm;
+            grad_minus = grad_prm;
+            grad_plus = grad_prm;
+
             alpha_prm = std::min(
                 real_scalar_t(1.), std::exp(joint - joint_0)
             );
@@ -320,15 +331,19 @@ public:
                 j - 1,
                 epsilon,
                 joint_0,
+
                 theta_minus,
                 r_minus,
                 grad_minus,
+
                 theta_plus,
                 r_plus,
                 grad_plus,
+
                 theta_prm,
                 grad_prm,
                 log_p_prm,
+
                 n_prm,
                 s_prm,
                 alpha_prm,
@@ -358,15 +373,19 @@ public:
                         j - 1,
                         epsilon,
                         joint_0,
+
                         theta_minus,
                         r_minus,
                         grad_minus,
+
                         theta_plus_temp,
                         r_plus_temp,
                         grad_plus_temp,
+
                         theta_prm_2,
                         grad_prm_2,
                         log_p_prm_2,
+
                         n_prm_2,
                         s_prm_2,
                         alpha_prm_2,
@@ -378,6 +397,7 @@ public:
                     real_vector_t theta_minus_temp(theta_minus);
                     real_vector_t r_minus_temp(r_minus);
                     real_vector_t grad_minus_temp(grad_minus);
+
                     build_tree(
                         theta_plus,
                         r_plus,
@@ -387,15 +407,19 @@ public:
                         j - 1,
                         epsilon,
                         joint_0,
+
                         theta_minus_temp,
                         r_minus_temp,
                         grad_minus_temp,
+
                         theta_plus,
                         r_plus,
                         grad_plus,
+
                         theta_prm_2,
                         grad_prm_2,
                         log_p_prm_2,
+
                         n_prm_2,
                         s_prm_2,
                         alpha_prm_2,
@@ -424,7 +448,7 @@ public:
                         theta_minus,
                         r_minus,
                         r_plus
-                    )
+                    ) == 1
                 ){
                     s_prm = 1;
                 }
@@ -446,7 +470,7 @@ public:
         real_vector_t theta_vec = theta_plus - theta_minus;
         if(
             inner_prod(theta_vec,r_minus) >= 0.
-            && inner_prod(theta_vec,r_plus) >= 0.
+            and inner_prod(theta_vec,r_plus) >= 0.
         ){
             return std::size_t(1);
         }
