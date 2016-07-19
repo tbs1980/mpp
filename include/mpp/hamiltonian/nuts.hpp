@@ -39,7 +39,8 @@ public:
     : m_log_posterior(log_posterior)
     , m_grad_log_posterior(grad_log_posterior)
     , m_num_dims(num_dims)
-    , m_delta(delta) {
+    , m_delta(delta)
+    , m_opt_epsilon(1.) {
 
         if( m_num_dims == size_t(0) ) {
             std::stringstream msg;
@@ -56,28 +57,16 @@ public:
     }
 
     template<class rng_t>
-    chain_t run_sampler(
-        std::size_t const num_samples,
-        real_vector_t const & start_point,
+    void adapt_epsilon(
+        std::size_t const num_burn_in,
+        real_vector_t & theta_0,
         rng_t & rng
-    ) {
+    ){
         BOOST_ASSERT_MSG(
-            num_samples <=
+            num_burn_in <=
                 size_t(MPP_MAXIMUM_NUMBER_OF_SAMPLES_PER_RUN_SAMPLER_CALL),
             "num_samples too big. Please modify the config and recompile."
         );
-        if( start_point.size() !=  m_num_dims){
-            std::stringstream msg;
-            msg << "The number of dimensions = "
-                << m_num_dims
-                << " is not equal to the length of start_point = "
-                << start_point.size();
-            throw std::length_error(msg.str());
-        }
-
-        real_vector_t theta_0(start_point);
-
-        chain_t hmc_chain(num_samples,m_num_dims);
 
         real_scalar_t log_p = m_log_posterior(theta_0);
         real_vector_t grad = m_grad_log_posterior(theta_0);
@@ -90,21 +79,21 @@ public:
             m_grad_log_posterior,
             rng
         );
-        std::cout<< "--> Reasonable epsilon = " << epsilon << std::endl;
+
         real_scalar_t const gamma = 0.05;
         std::size_t const t_0 = 10;
         real_scalar_t const kappa = 0.75;
         real_scalar_t mu = std::log(10*epsilon);
         real_scalar_t epsilon_bar = 1.;
         real_scalar_t H_bar = 0.;
-        std::size_t const M_adapt = 20;//num_samples;
+        std::size_t const M_adapt = num_burn_in;
         std::size_t m = 1;
 
         normal_dist_t nrm_dist(0.,1.);
         exp_dist_t exp_dist(1.);
         uni_real_dist_t uni_real_dist(0.,1.);
         std::size_t num_accepted = 0;
-        while( num_accepted < num_samples ) {
+        while( num_accepted < num_burn_in ) {
             ++m;
             real_vector_t r_0(m_num_dims);
             for(std::size_t ind_i = 0; ind_i < m_num_dims; ++ind_i) {
@@ -201,11 +190,7 @@ public:
                     theta_0 = theta_prm;
                     log_p = log_p_prm;
                     grad = grad_prm;
-                    if (m > M_adapt) {
-                        hmc_chain.set_sample(num_accepted,theta_prm,log_p_prm);
-                        ++ num_accepted;
-                        std::cout<<"--> num samples = " << num_accepted << std::endl;
-                    }
+                    ++ num_accepted;
                 }
 
                 n += n_prm;
@@ -237,15 +222,164 @@ public:
                 epsilon_bar = std::exp(
                     (1. - eta)*std::log(epsilon_bar) + eta*std::log(epsilon)
                 );
-                std::cout << "--> m = " << m << " Epsilon =  : " << epsilon
-                    << " and Epsilong_bar = " << epsilon_bar << std::endl;
             }
             else {
                 epsilon = epsilon_bar;
             }
+        }
+        m_opt_epsilon = epsilon;
+    }
 
-            // if (m > 10) { break; }
+    template<class rng_t>
+    chain_t run_sampler(
+        std::size_t const num_samples,
+        real_vector_t const & start_point,
+        rng_t & rng
+    ) {
+        BOOST_ASSERT_MSG(
+            num_samples <=
+                size_t(MPP_MAXIMUM_NUMBER_OF_SAMPLES_PER_RUN_SAMPLER_CALL),
+            "num_samples too big. Please modify the config and recompile."
+        );
+        if( start_point.size() !=  m_num_dims){
+            std::stringstream msg;
+            msg << "The number of dimensions = "
+                << m_num_dims
+                << " is not equal to the length of start_point = "
+                << start_point.size();
+            throw std::length_error(msg.str());
+        }
 
+        real_vector_t theta_0(start_point);
+
+        chain_t hmc_chain(num_samples,m_num_dims);
+
+        real_scalar_t log_p = m_log_posterior(theta_0);
+        real_vector_t grad = m_grad_log_posterior(theta_0);
+
+        real_scalar_t epsilon = m_opt_epsilon;
+        normal_dist_t nrm_dist(0.,1.);
+        exp_dist_t exp_dist(1.);
+        uni_real_dist_t uni_real_dist(0.,1.);
+        std::size_t num_accepted = 0;
+        while( num_accepted < num_samples ) {
+            real_vector_t r_0(m_num_dims);
+            for(std::size_t ind_i = 0; ind_i < m_num_dims; ++ind_i) {
+                r_0(ind_i) = nrm_dist(rng);
+            }
+            real_scalar_t const nrm2_r = inner_prod(r_0,r_0);
+            real_scalar_t const joint = log_p - 0.5*nrm2_r;
+            real_scalar_t const log_u = joint - exp_dist(rng);
+
+            real_vector_t theta_minus(theta_0);
+            real_vector_t theta_plus(theta_0);
+            real_vector_t r_minus(r_0);
+            real_vector_t r_plus(r_0);
+            real_vector_t grad_minus(grad);
+            real_vector_t grad_plus(grad);
+            std::size_t j = 0;
+            std::size_t n = 1;
+            std::size_t s = 1;
+            real_scalar_t alpha = 1;
+            std::size_t n_alpha = 1;
+
+            while (s == 1) {
+                real_vector_t theta_prm(theta_0);
+                real_vector_t grad_prm(grad);
+                real_scalar_t log_p_prm;
+                std::size_t n_prm = 1;
+                std::size_t s_prm = 1;
+
+                int const v = uni_real_dist(rng) > 0.5 ? 1 : -1;
+                if ( v == -1){
+                    real_vector_t theta_plus_temp(theta_plus);
+                    real_vector_t r_plus_temp(r_plus);
+                    real_vector_t grad_plus_temp(grad_plus);
+                    build_tree(
+                        theta_minus,
+                        r_minus,
+                        grad_minus,
+                        log_u,
+                        v,
+                        j,
+                        epsilon,
+                        joint,
+                        theta_minus,
+                        r_minus,
+                        grad_minus,
+                        theta_plus_temp,
+                        r_plus_temp,
+                        grad_plus_temp,
+                        theta_prm,
+                        grad_prm,
+                        log_p_prm,
+                        n_prm,
+                        s_prm,
+                        alpha,
+                        n_alpha,
+                        rng
+                    );
+                }
+                else {
+                    real_vector_t theta_minus_temp(theta_plus);
+                    real_vector_t r_minus_temp(r_plus);
+                    real_vector_t grad_minus_temp(grad_plus);
+                    build_tree(
+                        theta_minus,
+                        r_minus,
+                        grad_minus,
+                        log_u,
+                        v,
+                        j,
+                        epsilon,
+                        joint,
+                        theta_minus_temp,
+                        r_minus_temp,
+                        grad_minus_temp,
+                        theta_plus,
+                        r_plus,
+                        grad_plus,
+                        theta_prm,
+                        grad_prm,
+                        log_p_prm,
+                        n_prm,
+                        s_prm,
+                        alpha,
+                        n_alpha,
+                        rng
+                    );
+                }
+
+                if ( s_prm == 1
+                    and n > 0
+                    and uni_real_dist(rng)
+                        < (real_scalar_t)n_prm / (real_scalar_t)n
+                ){
+                    theta_0 = theta_prm;
+                    log_p = log_p_prm;
+                    grad = grad_prm;
+                    hmc_chain.set_sample(num_accepted,theta_prm,log_p_prm);
+                    ++ num_accepted;
+                }
+
+                n += n_prm;
+
+                if (
+                    s_prm == 1
+                    and stop_criterion(
+                        theta_minus,
+                        theta_plus,
+                        r_minus,
+                        r_plus
+                    ) == 1
+                ){
+                    s = 1;
+                }
+                else {
+                    s = 0;
+                }
+                j = j + 1;
+            }
         }
         return hmc_chain;
     }
@@ -260,19 +394,15 @@ public:
         std::size_t const j,
         real_scalar_t const epsilon,
         real_scalar_t const joint_0,
-
         real_vector_t & theta_minus,
         real_vector_t & r_minus,
         real_vector_t & grad_minus,
-
         real_vector_t & theta_plus,
         real_vector_t & r_plus,
         real_vector_t & grad_plus,
-
         real_vector_t & theta_prm,
         real_vector_t & grad_prm,
         real_scalar_t & log_p_prm,
-
         std::size_t & n_prm,
         std::size_t & s_prm,
         real_scalar_t & alpha_prm,
@@ -331,19 +461,15 @@ public:
                 j - 1,
                 epsilon,
                 joint_0,
-
                 theta_minus,
                 r_minus,
                 grad_minus,
-
                 theta_plus,
                 r_plus,
                 grad_plus,
-
                 theta_prm,
                 grad_prm,
                 log_p_prm,
-
                 n_prm,
                 s_prm,
                 alpha_prm,
@@ -373,19 +499,15 @@ public:
                         j - 1,
                         epsilon,
                         joint_0,
-
                         theta_minus,
                         r_minus,
                         grad_minus,
-
                         theta_plus_temp,
                         r_plus_temp,
                         grad_plus_temp,
-
                         theta_prm_2,
                         grad_prm_2,
                         log_p_prm_2,
-
                         n_prm_2,
                         s_prm_2,
                         alpha_prm_2,
@@ -407,19 +529,15 @@ public:
                         j - 1,
                         epsilon,
                         joint_0,
-
                         theta_minus_temp,
                         r_minus_temp,
                         grad_minus_temp,
-
                         theta_plus,
                         r_plus,
                         grad_plus,
-
                         theta_prm_2,
                         grad_prm_2,
                         log_p_prm_2,
-
                         n_prm_2,
                         s_prm_2,
                         alpha_prm_2,
@@ -577,6 +695,7 @@ private:
     grad_log_post_func_t m_grad_log_posterior;
     std::size_t m_num_dims;
     real_scalar_t m_delta;
+    real_scalar_t m_opt_epsilon;
 };
 
 }}

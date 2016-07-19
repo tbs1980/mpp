@@ -25,7 +25,7 @@ void test_nuts(std::string const & chn_file_name) {
     typedef std::normal_distribution<real_scalar_t> normal_distribution_t;
     typedef mcmc_chain<real_scalar_t> chain_t;
 
-    std::size_t const num_dims(1000);
+    std::size_t const num_dims(500);
     real_vector_t mean(num_dims);
     real_vector_t var(num_dims);
     for(size_t i=0;i<num_dims;++i) {
@@ -45,26 +45,21 @@ void test_nuts(std::string const & chn_file_name) {
         num_dims,
         delta
     );
-    std::size_t const num_samples(1000);
     rng_t rng;
     normal_distribution_t nrm_dist;
     real_vector_t theta_0(num_dims);
     for(std::size_t i=0;i<num_dims;++i) {
         theta_0(i) = nrm_dist(rng);
     }
-    // real_scalar_t res_eps = nuts_spr.find_reasonable_epsilon(
-    //     log_posterior,
-    //     grad_log_posterior,
-    //     theta_0,
-    //     rng
-    // );
-    // std::cout<<"realsonable epsilon = " << res_eps << std::endl;
+    std::size_t const num_burn_in = 20;
+    nuts_spr.adapt_epsilon(num_burn_in,theta_0,rng);
+    std::size_t const num_samples = 1000;
     chain_t chn = nuts_spr.run_sampler(num_samples,theta_0,rng);
     chn.write_samples_to_csv(chn_file_name);
 }
 
 BOOST_AUTO_TEST_CASE(nuts) {
     test_nuts<float>(std::string("float.chain"));
-    // test_nuts<double>(std::string("double.chain"));
-    // test_nuts<long double>(std::string("long-double.chain"));
+    test_nuts<double>(std::string("double.chain"));
+    test_nuts<long double>(std::string("long-double.chain"));
 }
