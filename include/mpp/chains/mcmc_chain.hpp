@@ -3,6 +3,9 @@
 
 #include <fstream>
 #include <iomanip>
+#include <exception>
+#include <sstream>
+#include <string>
 #include <boost/numeric/ublas/vector.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/matrix_proxy.hpp>
@@ -40,7 +43,31 @@ public:
         return m_weights;
     }
 
-    void write_samples_to_csv(std::string const & file_name) const {
+    void write_samples_to_csv( std::string const & file_name ) const {
+        write_samples_to_csv(file_name,0,m_num_dims);
+    }
+
+    void write_samples_to_csv(
+        std::string const & file_name,
+        std::size_t const from_dim,
+        std::size_t const to_dim
+    ) const {
+        if ( from_dim > to_dim) {
+            std::stringstream msg;
+            msg << "from_dim  = "
+                << from_dim
+                << " should be less than to_dim = " << to_dim << ".";
+            throw std::length_error(msg.str());
+        }
+        if ( to_dim > m_num_dims ) {
+            std::stringstream msg;
+            msg << "to_dim  = "
+                << to_dim
+                << " should be greater than or equal to "
+                << " the number of diemnsions = " << m_num_dims << ".";
+            throw std::length_error(msg.str());
+        }
+
         std::string delimiter(",");
         std::ofstream out_file;
         out_file.open(file_name,std::ios::trunc);
@@ -48,14 +75,14 @@ public:
         {
             out_file << std::scientific;
             out_file << std::setprecision(10);
-            for(size_t i=0;i<m_num_samples;++i)
+            for(std::size_t i = 0; i < m_num_samples; ++i)
             {
                 out_file << m_weights(i) << delimiter;
-                for(size_t j=0;j<size_t(m_num_dims-1);++j)
+                for(std::size_t j = from_dim; j < size_t(to_dim-1); ++j)
                 {
                     out_file << m_chain(i,j) << delimiter;
                 }
-                out_file << m_chain(i,size_t(m_num_dims-1)) <<std::endl;
+                out_file << m_chain(i,size_t(to_dim-1)) <<std::endl;
             }
         }
 
