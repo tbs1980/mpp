@@ -78,9 +78,23 @@ public:
     ) {
         typedef boost::multi_array<real_scalar_t, p_new.size()> multi_array_t;
         real_matrix_t G = mtr_tnsr_log_posterior(theta_new);
+        real_matrix_t invG = compute_inverse<real_scalar_t>(G);
         multi_array_t d_G = mtr_tnsr_der_log_posterior(theta_new);
+        multi_array_t invG_dG_invG(d_G);
         for(std::size_t ind_i = 0; ind_i < p_new.size(); ++ind_i ){
-
+            real_matrix_t d_G_i(p_new.size(),p_new.size());
+            for(std::size_t ind_j = 0; ind_j < p_new.size(); ++ind_j){
+                for(std::size_t ind_k =0; ind_k < p_new.size(); ++ind_k){
+                    d_G_i(ind_j,ind_k) = d_G[ind_i][ind_j][ind_k];
+                }
+            }
+            real_matrix_t invG_dG_invG_i = prod(invG,d_G_i);
+            for(std::size_t ind_j = 0; ind_j < p_new.size(); ++ind_j){
+                for(std::size_t ind_k =0; ind_k < p_new.size(); ++ind_k){
+                    invG_dG_invG[ind_i][ind_j][ind_k]
+                        = invG_dG_invG_i(ind_j,ind_k);
+                }
+            }
         }
         real_vector_t p_0(p_new);
         real_vector_t old_v(p_new);
@@ -88,7 +102,15 @@ public:
         for(std::size_t ind_i = 0; ind_i < num_fixed_point_steps; ++i){
             real_vector_t pT_invG_dG_invG_p(p_new.size());
             for(std::size_t ind_j = 0; ind_j < p_new.size(); ++ ind_j) {
-                pT_invG_dG_invG_p(ind_j) = prod()
+                real_matrix_t invG_dG_invG_i(p_new.size(),p_new.size());
+                for(std::size_t ind_k = 0; ind_k < p_new.size(); ++ind_k){
+                    for(std::size_t ind_l =0; ind_l < p_new.size(); ++ind_l){
+                        invG_dG_invG_i(ind_k,ind_l)
+                            = invG_dG_invG[ind_j][ind_k][ind_l];
+                    }
+                }
+                pT_invG_dG_invG_p(ind_j)
+                    = inner_prod( p_new, prod(invG_dG_invG_i,p_new) );
             }
         }
     }
