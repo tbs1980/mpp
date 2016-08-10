@@ -10,3 +10,8 @@ add_compute_test(
     "hamiltonian.nuts"
     nuts.cpp
 )
+
+add_compute_test(
+    "hamiltonian.reimann_manifold_hmc"
+    reimann_manifold_hmc.cpp
+)
