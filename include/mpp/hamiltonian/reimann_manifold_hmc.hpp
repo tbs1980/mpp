@@ -77,6 +77,7 @@ public:
         real_vector_t & theta_new,
     ) {
         typedef boost::multi_array<real_scalar_t, p_new.size()> multi_array_t;
+        const double c_e = 1e-4;
         real_matrix_t G = mtr_tnsr_log_posterior(theta_new);
         real_matrix_t invG = compute_inverse<real_scalar_t>(G);
         multi_array_t d_G = mtr_tnsr_der_log_posterior(theta_new);
