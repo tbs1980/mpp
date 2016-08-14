@@ -12,6 +12,29 @@
 
 namespace mpp { namespace utils {
 
+template<typename real_scalar_type>
+real_scalar_type compute_determinant(
+    boost::numeric::ublas::matrix<real_scalar_type>  m
+) {
+    // http://www.richelbilderbeek.nl/CppUblasMatrixExample7.htm
+    using namespace boost::numeric::ublas;
+    BOOST_ASSERT( m.size1() == m.size2() );
+    permutation_matrix<std::size_t> pivots( m.size1() );
+    int const is_singular = lu_factorize(m, pivots);
+    if (is_singular){
+        return real_scalar_type(0);
+    }
+    real_scalar_type d(1);
+    std::size_t const sz = pivots.size();
+    for (std::size_t i=0; i != sz; ++i){
+        if ( pivots(i) != i ){
+            d *= -1.;
+        }
+        d *= m(i,i);
+    }
+    return d;
+}
+
 template <typename real_scalar_t>
 std::size_t cholesky_decompose(
     boost::numeric::ublas::matrix<real_scalar_t> const & mat_A,

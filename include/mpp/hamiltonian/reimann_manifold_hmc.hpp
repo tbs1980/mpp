@@ -68,7 +68,7 @@ public:
         }
     }
 
-    static void stomer_verlet(
+    static real_scalar_t stomer_verlet(
         std::size_t const num_leap_frog_steps,
         std::size_t const num_fixed_point_steps,
         real_scalar_t const step_size,
@@ -80,14 +80,16 @@ public:
         real_vector_t & x_new
     ) {
         using namespace boost::numeric::ublas;
+        using namespace mpp::utils;
         typedef boost::multi_array<real_scalar_t, num_dims> multi_array_t;
         real_scalar_t const c_e = 1e-4;
         std::size_t const num_dims = num_dims;
         real_scalar_t log_post_x0 = log_posterior(x_new);
         real_matrix_t G = mtr_tnsr_log_posterior(x_new);
-        real_scalar_t det_G = ???
-        real_scalar_t H_0 = log_post_x0 +
+        real_scalar_t det_G = compute_determinant<real_scalar_t>(G);
         real_matrix_t invG = compute_inverse<real_scalar_t>(G);
+        real_scalar_t H_0 = -log_post_x0 + std::log(det_G) 
+            + 0.5*prod(p_new,prod(invG,p_new));
         multi_array_t d_G = mtr_tnsr_der_log_posterior(x_new);
         multi_array_t invG_dG_invG(d_G);
         real_vector_t tr_invG_dG(num_dims);
@@ -191,9 +193,29 @@ public:
             - 0.5*pT_invG_dG_invG_p
         );
 
-
+        log_post_x0 = log_posterior(x_new);
+        det_G = compute_determinant<real_scalar_t>(G);
+        real_scalar_t H_new = -log_post_x0 + std::log(det_G) 
+            + 0.5*prod(p_new,prod(invG,p_new));
+        
+        return -H_new + H_0;
     }
 
+    static real_scalar_t stomer_verlet(
+        std::size_t const num_leap_frog_steps,
+        std::size_t const num_fixed_point_steps,
+        real_scalar_t const step_size,
+        log_post_func_t & log_posterior,
+        grad_log_post_func_t & grad_log_posterior,
+        mtr_tnsr_log_post_func_t & mtr_tnsr_log_posterior,
+        mtr_tnsr_der_log_post_func_t & mtr_tnsr_der_log_posterior,
+        real_vector_t & p_new,
+        real_vector_t & x_new
+    ){
+        for(std::size_t lf_step_i=0;lf_step_i<num_leap_frog_steps;++lf_step_i){
+            
+        }
+    }
 private:
     log_post_func_t & m_log_posterior;
     grad_log_post_func_t & m_grad_log_posterior;
