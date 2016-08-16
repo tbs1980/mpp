@@ -12,6 +12,21 @@
 
 namespace mpp { namespace utils {
 
+template<typename real_scalar_t>
+real_scalar_t compute_trace(
+    boost::numeric::ublas::matrix<real_scalar_t>  m
+){
+    // http://boost.2283326.n4.nabble.com/Matrix-Trace-td2710079.html
+    using namespace boost::numeric::ublas;
+    typedef matrix<real_scalar_t> real_matrix_t;
+    matrix_vector_range<real_matrix_t> diag (
+        m, 
+        range(0,m.size1()), 
+        range(0,m.size2())
+    );
+    return sum(diag);
+}
+
 template<typename real_scalar_type>
 real_scalar_type compute_determinant(
     boost::numeric::ublas::matrix<real_scalar_type>  m

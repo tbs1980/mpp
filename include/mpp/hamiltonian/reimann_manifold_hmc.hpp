@@ -214,7 +214,7 @@ public:
     ){
         using namespace boost::numeric::ublas;
         using namespace mpp::utils;
-        typedef boost::multi_array<real_scalar_t, num_dims> multi_array_t;
+        typedef unbounded_array<real_matrix_t> real_matrix_array_t;
         real_scalar_t const c_e = 1e-4;
         std::size_t const num_dims = num_dims;
 
@@ -224,18 +224,19 @@ public:
         real_matrix_t invG = compute_inverse<real_scalar_t>(G);
         real_scalar_t const H_0 = -log_post_x0 + std::log(det_G)
             + 0.5*prod(p_new,prod(invG,p_new));
-        multi_array_t d_G = mtr_tnsr_der_log_posterior(x_new);
+        real_matrix_array_t d_G = mtr_tnsr_der_log_posterior(x_new);
 
         for(std::size_t lf_i = 0; lf_i < num_leap_frog_steps ; ++lf_i){
-            multi_array_t invG_dG_invG(d_G);
+            real_matrix_array_t invG_dG_invG(d_G.size());
             real_vector_t tr_invG_dG(num_dims);
             for(std::size_t dim_i = 0; dim_i < num_dims; ++dim_i ){
-                real_matrix_t d_G_i(num_dims,num_dims);
-                for(std::size_t ind_j = 0; ind_j < num_dims; ++ind_j){
-                    for(std::size_t ind_k =0; ind_k < num_dims; ++ind_k){
-                        d_G_i(ind_j,ind_k) = d_G[dim_i][ind_j][ind_k];
-                    }
-                }
+                // real_matrix_t d_G_i(num_dims,num_dims);
+                // for(std::size_t ind_j = 0; ind_j < num_dims; ++ind_j){
+                //     for(std::size_t ind_k =0; ind_k < num_dims; ++ind_k){
+                //         d_G_i(ind_j,ind_k) = d_G[dim_i][ind_j][ind_k];
+                //     }
+                // }
+                real_matrix_t d_G_i = d_G[dim_i];
                 real_matrix_t invG_dG_invG_i = prod(invG,d_G_i);
                 tr_invG_dG(dim_i) = 0.;
                 for(std::size_t ind_j = 0; ind_j < num_dims; ++ind_j){
