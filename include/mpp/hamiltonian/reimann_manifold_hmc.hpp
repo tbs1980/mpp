@@ -16,15 +16,18 @@ class rm_hmc_sampler{
 public:
     typedef boost::numeric::ublas::vector<real_scalar_t> real_vector_t;
     typedef boost::numeric::ublas::matrix<real_scalar_t> real_matrix_t;
-    typedef mpp::chains::mcmc_chain<real_scalar_t> chain_type;
+    typedef mpp::chains::mcmc_chain<real_scalar_t> chain_t;
+    typedef std::uniform_real_distribution<real_scalar_t> uni_real_dist_t;
+    typedef std::uniform_int_distribution<size_t> uni_int_dist_t;
+    typedef std::normal_distribution<real_scalar_t> normal_distribution_t;
     typedef typename std::function<
-        real_scalar_t (real_vector_type const &) > log_post_func_t;
+        real_scalar_t (real_scalar_t const &) > log_post_func_t;
     typedef typename std::function<
-        real_vector_t (real_vector_type const &)> grad_log_post_func_t;
+        real_vector_t (real_scalar_t const &)> grad_log_post_func_t;
     typedef typename std::function<
-        real_matrix_t (real_vector_type const &)> mtr_tnsr_log_post_func_t;
+        real_matrix_t (real_scalar_t const &)> mtr_tnsr_log_post_func_t;
     typedef typename std::function<
-        real_matrix_t (real_vector_type const &)> mtr_tnsr_der_log_post_func_t;
+        real_matrix_t (real_scalar_t const &)> mtr_tnsr_der_log_post_func_t;
     typedef std::normal_distribution<real_scalar_t> normal_dist_t;
 
     rm_hmc_sampler(
@@ -46,26 +49,76 @@ public:
         real_vector_t const & start_point,
         rng_t & rng
     ) {
-        using mpp::utils;
-        using boost::numeric::ublas;
+        using namespace boost::numeric::ublas;
+        using namespace mpp::utils;
+        typedef unbounded_array<real_matrix_t> real_matrix_array_t;
 
-        normal_dist_t nrm_dist(0.,1.);
-        std::size_t num_accepted = 0;
-        std::size_t num_rejected = 0;
-        real_vector_t state_x(start_point);
-        real_matrix_t G = mtr_tnsr_log_posterior(state_x);
-        real_matrix_t dG = mtr_tnsr_der_log_posterior(state_x);
-        while( num_accepted < num_samples ) {
-
-            real_matrix_t cholG = cholesky_decompose<real_scalar_t>(G);
-            real_matrix_t invG = compute_inverse<real_scalar_t>(G);
-
-            real_vector_t p(m_num_dims);
-            for(std::size_t ind_i = 0; ind_i < m_num_dims; ++ind_i) {
-                p(ind_i) = nrm_dist(rng);
-            }
-            p = prod(cholG,p);
+        BOOST_ASSERT_MSG(
+            num_samples <=
+                size_t(MPP_MAXIMUM_NUMBER_OF_SAMPLES_PER_RUN_SAMPLER_CALL),
+            "num_samples too big. Please modify the config and recompile."
+        );
+        if( start_point.size() !=  m_num_dims){
+            std::stringstream msg;
+            msg << "The number of dimensions = "
+                << m_num_dims
+                << " is not equal to the length of start_point = "
+                << start_point.size();
+            throw std::length_error(msg.str());
         }
+
+        chain_type rmhmc_chain(num_samples,m_num_dims);
+        uni_real_dist_t uni_real_dist;
+        uni_int_dist_t uni_int_dist( size_t(1),m_max_num_steps+size_t(1) );
+        normal_distribution_t norm_dist;
+        real_vector_t q_1(start_point);
+        size_t num_accepted(0);
+        size_t num_rejected(0);
+        while( num_accepted < num_samples ) {
+            real_vector_t q_0(q_1);
+            real_matrix_t G = mtr_tnsr_log_posterior(q_0);
+            real_matrix_t chol_G(G.size1(),G.size2());
+            std::size_t res = cholesky_decompose<real_scalar_t>(G,chol_G);
+            BOOST_ASSERT_MSG(res == 0,"Matrix G is not positive definite.");
+            real_scalar_t const step_size = m_max_eps*uni_real_dist(rng);
+            size_t const num_leap_frog_steps = uni_int_dist(rng);
+            real_vector_t p_0(m_num_dims);
+            for(std::size_t dim_i = 0; dim_i < m_num_dims; ++dim_i){
+                p_0(dim_i) = norm_dist(rng);
+            }
+
+            real_scalar_t const delta_h = p_0 = prod(p_0,chol_G);
+            stomer_verlet(
+                num_leap_frog_steps,
+                m_num_fixed_point_steps,
+                step_size,
+                m_log_posterior,
+                m_grad_log_posterior,
+                m_mtr_tnsr_log_posterior,
+                m_mtr_tnsr_der_log_posterior,
+                p_0,
+                q_0
+            );
+
+            if( not std::isfinite(delta_h) ) {
+                std::stringstream msg;
+                msg << "delta(H) value is not finite";
+                throw std::out_of_range(msg.str());
+            }
+            real_scalar_t const uni_rand = uni_real_dist(rng);
+            if(std::log(uni_rand) < -delta_h*m_beta) {
+                q_1 = q_0;
+                rmhmc_chain.set_sample(num_accepted,q_1,log_post_val);
+                ++num_accepted;
+            }
+            else {
+                ++num_rejected;
+            }
+        }
+        m_acc_rate = real_scalar_type(num_accepted)
+            / real_scalar_type(num_accepted + num_rejected);
+
+        return hmc_chain;
     }
 
     static real_scalar_t stomer_verlet(
@@ -84,14 +137,14 @@ public:
         typedef unbounded_array<real_matrix_t> real_matrix_array_t;
         real_scalar_t const c_e = 1e-4;
         std::size_t const num_dims = num_dims;
-        
+
         real_matrix_t G = mtr_tnsr_log_posterior(x_new);
         real_scalar_t det_G = compute_determinant<real_scalar_t>(G);
-        real_matrix_t invG = compute_inverse<real_scalar_t>(G);     
+        real_matrix_t invG = compute_inverse<real_scalar_t>(G);
         real_scalar_t log_post_x0 = log_posterior(x_new);
         real_scalar_t const H_0 = -log_post_x0 + std::log(det_G)
             + 0.5*prod(p_new,prod(invG,p_new));
-            
+
         real_matrix_array_t d_G = mtr_tnsr_der_log_posterior(x_new);
         for(std::size_t lf_i = 0; lf_i < num_leap_frog_steps ; ++lf_i){
             real_matrix_array_t invG_dG_invG(d_G.size());
@@ -99,12 +152,12 @@ public:
             for(std::size_t dim_i = 0; dim_i < num_dims; ++dim_i ){
                 real_matrix_t d_G_i = d_G[dim_i];
                 real_matrix_t invG_dG_invG_i = prod(invG,d_G_i);
-                tr_invG_dG(dim_i) 
+                tr_invG_dG(dim_i)
                     = compute_trace<real_scalar_t>(invG_dG_invG_i);
                 invG_dG_invG_i = prod(invG_dG_invG_i,invG);
                 invG_dG_invG[dim_i] = invG_dG_invG_i;
             }
-            
+
             real_vector_t p_0(p_new);
             real_scalar_t norm_p_0 = norm_2(p_0);
             real_vector_t pT_invG_dG_invG_p(num_dims);
@@ -124,7 +177,7 @@ public:
                     break;
                 }
             }
-            
+
             real_vector_t x_0(x_new);
             real_matrix_t invG_new(invG);
             real_scalar_t norm_x_0 = norm_2(x_0);
@@ -137,13 +190,13 @@ public:
                     break;
                 }
             }
-            
+
             invG = invG_new;
             d_G = mtr_tnsr_der_log_posterior(x_new);
             for(std::size_t dim_i = 0; dim_i < num_dims; ++dim_i ){
                 real_matrix_t d_G_i = d_G[dim_i];
                 real_matrix_t invG_dG_invG_i = prod(invG,d_G_i);
-                tr_invG_dG(ind_i) 
+                tr_invG_dG(ind_i)
                     = compute_trace<real_scalar_t>(invG_dG_invG_i);
                 invG_dG_invG_i = prod(invG_dG_invG_i,invG);
                 invG_dG_invG[dim_i] = invG_dG_invG_i;
@@ -158,9 +211,9 @@ public:
                 grad_log_posterior(x_new)
                 + 0.5*tr_invG_dG
                 - 0.5*pT_invG_dG_invG_p
-            ); 
+            );
         }
-        
+
         real_scalar_t log_post_x_new = log_posterior(x_new);
         det_G = compute_determinant<real_scalar_t>(G);
         real_scalar_t H_new = -log_post_x_new + std::log(det_G)
@@ -176,7 +229,7 @@ private:
     std::size_t m_num_dims;
     std::size_t m_max_epsilon;
     std::size_t m_max_num_leap_frog_steps;
-    std::size_t num_fixed_point_steps;
+    std::size_t m_num_fixed_point_steps;
 };
 
 }}
