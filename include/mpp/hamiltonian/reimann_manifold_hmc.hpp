@@ -31,7 +31,7 @@ public:
     typedef typename std::function<
         real_matrix_t (real_vector_t const &)> mtr_tnsr_log_post_func_t;
     typedef typename std::function<
-        real_matrix_array_t (real_vector_t const &)> der_mtr_tnsr_log_post_func_t;
+        real_matrix_array_t (real_vector_t const&)> der_mtr_tnsr_log_post_func_t;
     typedef std::normal_distribution<real_scalar_t> normal_dist_t;
 
     rm_hmc_sampler(
@@ -103,7 +103,6 @@ public:
     ) {
         using namespace boost::numeric::ublas;
         using namespace mpp::utils;
-        typedef unbounded_array<real_matrix_t> real_matrix_array_t;
 
         BOOST_ASSERT_MSG(
             num_samples <=
@@ -192,7 +191,7 @@ public:
         using namespace mpp::utils;
 
         real_scalar_t const c_e = 1e-4;
-        std::size_t const num_dims = num_dims;
+        std::size_t const num_dims = p_new.size();
 
         real_matrix_t G = mtr_tnsr_log_posterior(x_new);
         real_scalar_t det_G = compute_determinant<real_scalar_t>(G);

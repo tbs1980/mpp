@@ -18,9 +18,6 @@ void test_rmhmc_stomer_verlet() {
     using namespace mpp::hamiltonian;
     typedef diag_multivar_normal<real_scalar_t> diag_multivar_normal_t;
     typedef vector<real_scalar_t> real_vector_t;
-    typedef matrix<real_scalar_t> real_matrix_t;
-    typedef boost::numeric::ublas::unbounded_array<real_matrix_t>
-        real_matrix_array_t;
     typedef rm_hmc_sampler<real_scalar_t> rm_hmc_sampler_t;
     typedef typename rm_hmc_sampler_t::log_post_func_t log_post_func_t;
     typedef typename rm_hmc_sampler_t::grad_log_post_func_t grad_log_post_func_t;
@@ -50,25 +47,8 @@ void test_rmhmc_stomer_verlet() {
         &dmn,_1
     );
 
-    // scalar_vector<real_scalar_t> q_test(num_dims,0);
-    //
-    // std::cout << " log posterior = " << dmn.log_posterior(q_test) << std::endl;
-    //
-    // std::cout << " gradient = " << dmn.grad_log_posterior(q_test) << std::endl;
-    //
-    // std::cout << " metric tensor = " << dmn.metric_tensor_log_posterior(q_test)
-    //     << std::endl;
-    //
-    // std::cout << " derivative wrt each dimensionality of the metric tensor"
-    //     << std::endl;
-    // real_matrix_array_t d_G = dmn.deriv_metric_tensor_log_posterior(q_test);
-    // for(std::size_t dim_i = 0; dim_i < num_dims; ++dim_i) {
-    //     std::cout << dim_i << "\t" << d_G[dim_i] << std::endl;
-    // }
-    //
-
-    std::size_t const num_leap_frog_steps = 1;
-    std::size_t const num_fixed_point_steps = 1;
+    std::size_t const num_leap_frog_steps = 5;
+    std::size_t const num_fixed_point_steps = 5;
     real_scalar_t const step_size = 1;
     real_vector_t p_0(num_dims);
     real_vector_t x_0(num_dims);
@@ -90,6 +70,8 @@ void test_rmhmc_stomer_verlet() {
         num_fixed_point_steps
     );
 
+    std::cout << x_0 << std::endl;
+
     rm_hmc_spr.stomer_verlet(
         num_leap_frog_steps,
         num_fixed_point_steps,
@@ -101,6 +83,8 @@ void test_rmhmc_stomer_verlet() {
         p_0,
         x_0
     );
+
+    std::cout << x_0 << std::endl;
 
 }
 
