@@ -42,7 +42,7 @@ public:
         mtr_tnsr_log_post_func_t & mtr_tnsr_log_posterior,
         der_mtr_tnsr_log_post_func_t & drv_mtr_tnsr_log_posterior,
         std::size_t const num_dims,
-        std::size_t const max_epsilon,
+        real_scalar_t const max_epsilon,
         std::size_t const max_leap_frog_steps,
         std::size_t const max_fixed_point_steps
     )
@@ -91,7 +91,7 @@ public:
             msg << "Maximum value of epsilon = "
                 << m_max_epsilon
                 << " in the discretisation of Hamiltonian should be"
-                << " in the intervale (0,1].";
+                << " in the interval (0,1].";
             throw std::domain_error(msg.str());
         }
 
@@ -199,7 +199,6 @@ public:
         real_scalar_t det_G = compute_determinant<real_scalar_t>(G);
         real_matrix_t invG(G);
         compute_inverse<real_scalar_t>(G,invG);
-        // std::cout << "inv G = " << invG << std::endl;
         real_scalar_t log_post_x0 = log_posterior(x_new);
         real_scalar_t const H_0 = -log_post_x0 + std::log(det_G)
             + 0.5*inner_prod(p_new,prod(invG,p_new));
@@ -210,15 +209,12 @@ public:
             real_vector_t tr_invG_dG(num_dims);
             for(std::size_t dim_i = 0; dim_i < num_dims; ++dim_i ){
                 real_matrix_t d_G_i = d_G[dim_i];
-                // std::cout << dim_i << "\t" << d_G_i << std::endl;
                 real_matrix_t invG_dG_invG_i = prod(invG,d_G_i);
                 tr_invG_dG(dim_i)
                     = compute_trace<real_scalar_t>(invG_dG_invG_i);
                 invG_dG_invG_i = prod(invG_dG_invG_i,invG);
-                // std::cout << dim_i << "\t" << invG_dG_invG_i << std::endl;
                 invG_dG_invG[dim_i] = invG_dG_invG_i;
             }
-            // std::cout << "trace of invG_dG  = " << tr_invG_dG << std::endl;
 
             real_vector_t p_0(p_new);
             real_scalar_t norm_p_0 = norm_2(p_0);
@@ -229,14 +225,14 @@ public:
                     pT_invG_dG_invG_p(dim_i)
                         = inner_prod( p_new, prod(invG_dG_invG_i,p_new) );
                 }
-                // std::cout << fp_i << "\t" << pT_invG_dG_invG_p << std::endl;
                 p_new = p_0 - step_size*0.5*(
-                    grad_log_posterior(x_new)
+                    -grad_log_posterior(x_new)
                     + 0.5*tr_invG_dG
                     - 0.5*pT_invG_dG_invG_p
                 );
                 real_scalar_t norm_p_new = norm_2(p_new);
                 if( norm_2(p_0/norm_p_0 - p_new/norm_p_new) < c_e ){
+                    std::cout << " p break at " << fp_i << "\t" << std::endl;
                     break;
                 }
             }
@@ -244,15 +240,15 @@ public:
             real_vector_t x_0(x_new);
             real_matrix_t invG_new(invG);
             real_scalar_t norm_x_0 = norm_2(x_0);
-            // std::cout<< "invG_new = " << invG_new << std::endl;
             for(std::size_t fp_i = 0; fp_i < num_fixed_point_steps; ++fp_i){
                 real_vector_t prod_invG_invG_new_p_new = prod(invG+invG_new,p_new);
-                // std::cout << fp_i << "\t" << prod_invG_invG_new_p_new << std::endl;
                 x_new = x_0 + step_size*0.5*( prod_invG_invG_new_p_new );
+                // TODO check for nans here.
                 G = mtr_tnsr_log_posterior(x_new);
                 compute_inverse<real_scalar_t>(G,invG_new);
                 real_scalar_t norm_x_new = norm_2(x_new);
                 if( norm_2(x_0/norm_x_0 - x_new/norm_x_new) < c_e ){
+                    std::cout << " x break at " << fp_i << "\t" << std::endl;
                     break;
                 }
             }
@@ -274,7 +270,7 @@ public:
                     = inner_prod( p_new, prod(invG_dG_invG_i,p_new) );
             }
             p_new = p_new - step_size*0.5*(
-                grad_log_posterior(x_new)
+                -grad_log_posterior(x_new)
                 + 0.5*tr_invG_dG
                 - 0.5*pT_invG_dG_invG_p
             );
@@ -294,7 +290,7 @@ private:
     mtr_tnsr_log_post_func_t & m_mtr_tnsr_log_posterior;
     der_mtr_tnsr_log_post_func_t & m_drv_mtr_tnsr_log_posterior;
     std::size_t m_num_dims;
-    std::size_t m_max_epsilon;
+    real_scalar_t m_max_epsilon;
     std::size_t m_max_num_leap_frog_steps;
     std::size_t m_num_fixed_point_steps;
     real_scalar_t m_beta;

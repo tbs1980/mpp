@@ -8,6 +8,7 @@
 #include <functional>
 #include <iostream>
 #include <random>
+#include <limits>
 #include <mpp/dists/multivariate_normal.hpp>
 #include <mpp/hamiltonian/reimann_manifold_hmc.hpp>
 
@@ -47,8 +48,8 @@ void test_rmhmc_stomer_verlet() {
         &dmn,_1
     );
 
-    std::size_t const num_leap_frog_steps = 5;
-    std::size_t const num_fixed_point_steps = 5;
+    std::size_t const num_leap_frog_steps = 6;
+    std::size_t const num_fixed_point_steps = 4;
     real_scalar_t const step_size = 1;
     real_vector_t p_0(num_dims);
     real_vector_t x_0(num_dims);
@@ -70,8 +71,7 @@ void test_rmhmc_stomer_verlet() {
         num_fixed_point_steps
     );
 
-    std::cout << x_0 << std::endl;
-
+    real_vector_t x_test(x_0);
     rm_hmc_spr.stomer_verlet(
         num_leap_frog_steps,
         num_fixed_point_steps,
@@ -81,13 +81,20 @@ void test_rmhmc_stomer_verlet() {
         metric_tensor_log_posterior,
         deriv_metric_tensor_log_posterior,
         p_0,
-        x_0
+        x_test
     );
 
-    std::cout << x_0 << std::endl;
+    real_scalar_t eps = std::numeric_limits<real_scalar_t>::epsilon();
+    for(std::size_t dim_i = 0; dim_i < num_dims; ++dim_i){
+        BOOST_CHECK(
+            std::abs(x_test(dim_i) - x_0(dim_i)) <= eps*10.
+        );
+    }
 
 }
 
 BOOST_AUTO_TEST_CASE(rmhmc_stomer_verlet) {
+    test_rmhmc_stomer_verlet<float>();
     test_rmhmc_stomer_verlet<double>();
+    test_rmhmc_stomer_verlet<long double>();
 }

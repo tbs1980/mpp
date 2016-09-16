@@ -89,7 +89,7 @@ public:
             msg << "Maximum value of epsilon = "
                 << m_max_eps
                 << " in the discretisation of Hamiltonian should be"
-                << " in the intervale (0,1].";
+                << " in the interval (0,1].";
             throw std::domain_error(msg.str());
         }
 
