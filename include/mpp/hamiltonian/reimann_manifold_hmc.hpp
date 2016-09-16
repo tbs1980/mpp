@@ -131,8 +131,11 @@ public:
         size_t num_rejected(0);
         while( num_accepted < num_samples ) {
             real_vector_t q_0(q_1);
-            real_matrix_t G = mtr_tnsr_log_posterior(q_0);
-            real_matrix_t chol_G(G.size1(),G.size2());
+            real_matrix_t G = m_mtr_tnsr_log_posterior(q_0);
+            real_matrix_t chol_G = zero_matrix<real_scalar_t>(
+                G.size1(),
+                G.size2()
+            );
             std::size_t res = cholesky_decompose<real_scalar_t>(G,chol_G);
             BOOST_ASSERT_MSG(res == 0,"Matrix G is not positive definite.");
             real_scalar_t const step_size = m_max_epsilon*uni_real_dist(rng);
@@ -141,9 +144,9 @@ public:
             for(std::size_t dim_i = 0; dim_i < m_num_dims; ++dim_i){
                 p_0(dim_i) = norm_dist(rng);
             }
+            p_0 = prod(p_0,chol_G);
 
-            real_scalar_t const delta_h = p_0 = prod(p_0,chol_G);
-            stomer_verlet(
+            real_scalar_t const delta_h = stomer_verlet(
                 num_leap_frog_steps,
                 m_num_fixed_point_steps,
                 step_size,
@@ -177,8 +180,11 @@ public:
         return rmhmc_chain;
     }
 
+    inline real_scalar_t acc_rate() const {
+        return m_acc_rate;
+    }
 
-    static real_scalar_t stomer_verlet(
+    real_scalar_t stomer_verlet(
         std::size_t const num_leap_frog_steps,
         std::size_t const num_fixed_point_steps,
         real_scalar_t const step_size,

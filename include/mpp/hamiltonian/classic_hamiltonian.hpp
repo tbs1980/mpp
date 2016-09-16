@@ -161,7 +161,7 @@ public:
         return m_acc_rate;
     }
 
-    static void leap_frog(
+    void leap_frog(
         grad_log_post_func_type & grad_log_posterior,
         kinetic_energy_type & kin_eng,
         real_vector_type & q,
