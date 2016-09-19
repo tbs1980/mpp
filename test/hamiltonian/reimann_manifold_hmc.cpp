@@ -160,14 +160,23 @@ void test_rmhmc(std::string const & chn_file_name){
     // std::cout << "acc rate = " << rm_hmc_spr.acc_rate() << std::endl;
 }
 
-BOOST_AUTO_TEST_CASE(rmhmc_stomer_verlet) {
-    test_rmhmc_stomer_verlet<float>();
-    test_rmhmc_stomer_verlet<double>();
-    test_rmhmc_stomer_verlet<long double>();
-}
+// BOOST_AUTO_TEST_CASE(rmhmc_stomer_verlet) {
+//     test_rmhmc_stomer_verlet<float>();
+//     test_rmhmc_stomer_verlet<double>();
+//     test_rmhmc_stomer_verlet<long double>();
+// }
+//
+// BOOST_AUTO_TEST_CASE(rmhmc){
+//     test_rmhmc<float>(std::string("float.chain"));
+//     test_rmhmc<double>(std::string("double.chain"));
+//     test_rmhmc<long double>(std::string("long-double.chain"));
+// }
 
-BOOST_AUTO_TEST_CASE(rmhmc){
-    test_rmhmc<float>(std::string("float.chain"));
-    test_rmhmc<double>(std::string("double.chain"));
-    test_rmhmc<long double>(std::string("long-double.chain"));
+BOOST_AUTO_TEST_CASE(rmhmc_banana){
+    using namespace boost::numeric::ublas;
+    vector<double> v1 (3), v2 (3);
+    for (unsigned i = 0; i < std::min (v1.size (), v2.size ()); ++ i){
+        v1 (i) = v2 (i) = i;
+    }
+    std::cout << outer_prod (v1, v2) << std::endl;
 }

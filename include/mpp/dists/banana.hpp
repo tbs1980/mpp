@@ -80,6 +80,12 @@ public:
         real_scalar_t const theta_1 = theta(0);
         real_scalar_t const theta_2 = theta(1);
         real_scalar_t const mu = theta_1 + theta_2*theta_2;
+
+        real_scalar_t log_pr =
+            -0.5*(theta_1*theta_1 + theta_2*theta_2)
+            /m_sigma_theta/m_sigma_theta;
+
+
         real_scalar_t log_lik(0);
         for(std::size_t dim_i = 0; dim_i < m_num_data_points; ++ dim_i){
             real_scalar_t const diff = m_data_y(dim_i) - mu;
@@ -87,11 +93,7 @@ public:
         }
         log_lik *= 0.5;
 
-        real_scalar_t log_pr =
-            -0.5*(theta_1*theta_1 + theta_2*theta_2)
-            /m_sigma_theta/m_sigma_theta;
-
-        return log_lik + log_pr;
+        return log_pr + log_lik;
     }
 
     real_vector_t grad_log_posterior(real_vector_t const & theta) const {
@@ -99,20 +101,30 @@ public:
             theta.size() == 2,
             "theta should be a two dimensional vector."
         );
-        real_vector_t dq(q.size());
-        return dq;
+        real_vector_t d_log_pr = -theta/m_sigma_theta/m_sigma_theta;
+        real_vector_t d_log_lik = scalar_vector(theta.size(),1.);
+        d_log_lik(1) = 2*theta(1);
+        real_scalar_t const theta_1 = theta(0);
+        real_scalar_t const theta_2 = theta(1);
+        real_scalar_t const mu = theta_1 + theta_2*theta_2;
+        d_log_lik *= ( sum(m_data_y) - m_num_data_points*mu )
+            /m_sigma_y/m_sigma_y;
+        real_vector_t d_theta = d_log_pr + d_log_lik;
+        return d_theta;
     }
 
-    real_matrix_t metric_tensor_log_posterior(real_vector_t const & q) const {
+    real_matrix_t metric_tensor_log_posterior(real_vector_t const & theta)const{
         BOOST_ASSERT_MSG(
             theta.size() == 2,
             "theta should be a two dimensional vector."
         );
         using namespace boost::numeric::ublas;
-        real_matrix_t G = identity_matrix<real_scalar_t>(m_var.size());
-        for(std::size_t ind_i = 0; ind_i < m_var.size(); ++ind_i){
-            G(ind_i,ind_i) = 1./m_var(ind_i);
-        }
+        real_matrix_t G(theta.size(),theta.size());
+        real_vector_t theta_tmp = scalar_vector(theta.size(),1.);
+        theta_tmp(1) = 2*theta(1);
+        G = outer_prod(theta_tmp,theta_tmp);
+        BOOST_ASSERT(G.size1() == 2);
+        BOOST_ASSERT(G.size2() == 2);
         return G;
     }
 
