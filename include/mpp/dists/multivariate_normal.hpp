@@ -5,7 +5,9 @@
 #include <boost/numeric/ublas/vector.hpp>
 #include <cmath>
 #include <string>
+#include <sstream>
 #include <cstddef>
+#include <type_traits>
 
 namespace mpp { namespace dists {
 
@@ -26,7 +28,7 @@ public:
     diag_multivar_normal(
         real_vector_t const & mean,
         real_vector_t const & var
-    ) throw()
+    )
     :m_mean(mean),m_var(var) {
         if( m_mean.size() != m_var.size() ) {
             std::stringstream msg;
@@ -94,6 +96,10 @@ public:
     }
 
     real_matrix_t metric_tensor_log_posterior(real_vector_t const & q) const {
+        BOOST_ASSERT_MSG(
+            q.size() == m_var.size(),
+            "q should have the same dimensionality of the log_posterior."
+        );
         using namespace boost::numeric::ublas;
         real_matrix_t G = identity_matrix<real_scalar_t>(m_var.size());
         for(std::size_t ind_i = 0; ind_i < m_var.size(); ++ind_i){
@@ -105,6 +111,10 @@ public:
     real_matrix_array_t deriv_metric_tensor_log_posterior(
         real_vector_t const & q
     ) const {
+        BOOST_ASSERT_MSG(
+            q.size() == m_var.size(),
+            "q should have the same dimensionality of the log_posterior."
+        );
         using namespace boost::numeric::ublas;
         real_matrix_array_t d_G( m_var.size(),
             zero_matrix<real_scalar_t>( m_var.size(),m_var.size() )
