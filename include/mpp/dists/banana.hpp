@@ -125,6 +125,8 @@ public:
         G = outer_prod(theta_tmp,theta_tmp);
         BOOST_ASSERT(G.size1() == 2);
         BOOST_ASSERT(G.size2() == 2);
+        G(0,0) += 1./m_sigma_theta/m_sigma_theta;
+        G(1,1) += 1./m_sigma_theta/m_sigma_theta;
         return G;
     }
 
