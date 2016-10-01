@@ -11,7 +11,9 @@
 #include <limits>
 #include <string>
 #include <mpp/dists/multivariate_normal.hpp>
+#include <mpp/dists/banana.hpp>
 #include <mpp/hamiltonian/reimann_manifold_hmc.hpp>
+#include <mpp/hamiltonian/classic_hamiltonian.hpp>
 
 template<typename real_scalar_t>
 void test_rmhmc_stomer_verlet() {
@@ -29,7 +31,7 @@ void test_rmhmc_stomer_verlet() {
         rm_hmc_sampler_t::der_mtr_tnsr_log_post_func_t
             der_mtr_tnsr_log_post_func_t;
     typedef std::normal_distribution<real_scalar_t> normal_distribution_t;
-    typedef std::mt19937 rng_type;
+    typedef std::mt19937 rng_t;
 
     size_t const num_dims(10);
     scalar_vector<real_scalar_t> mean(num_dims,0.);
@@ -54,7 +56,7 @@ void test_rmhmc_stomer_verlet() {
     real_scalar_t const step_size = 1;
     real_vector_t p_0(num_dims);
     real_vector_t x_0(num_dims);
-    rng_type rng;
+    rng_t rng;
     normal_distribution_t norm_dist(0,1);
     for(std::size_t dim_i = 0; dim_i < num_dims; ++dim_i){
         p_0(dim_i) = norm_dist(rng);
@@ -114,8 +116,8 @@ void test_rmhmc(std::string const & chn_file_name){
         rm_hmc_sampler_t::der_mtr_tnsr_log_post_func_t
             der_mtr_tnsr_log_post_func_t;
     typedef std::normal_distribution<real_scalar_t> normal_distribution_t;
-    typedef std::mt19937 rng_type;
-    typedef mcmc_chain<real_scalar_t> chain_type;
+    typedef std::mt19937 rng_t;
+    typedef mcmc_chain<real_scalar_t> chain_t;
 
     size_t const num_dims(10);
     scalar_vector<real_scalar_t> mean(num_dims,0.);
@@ -150,12 +152,12 @@ void test_rmhmc(std::string const & chn_file_name){
 
     size_t const num_samples(100);
     real_vector_t x_0(num_dims);
-    rng_type rng;
+    rng_t rng;
     normal_distribution_t norm_dist(0,1);
     for(std::size_t dim_i = 0; dim_i < num_dims; ++dim_i){
         x_0(dim_i) = norm_dist(rng);
     }
-    chain_type chn = rm_hmc_spr.run_sampler(num_samples,x_0,rng);
+    chain_t chn = rm_hmc_spr.run_sampler(num_samples,x_0,rng);
     chn.write_samples_to_csv(chn_file_name);
     // std::cout << "acc rate = " << rm_hmc_spr.acc_rate() << std::endl;
 }
@@ -172,11 +174,161 @@ void test_rmhmc(std::string const & chn_file_name){
 //     test_rmhmc<long double>(std::string("long-double.chain"));
 // }
 
-BOOST_AUTO_TEST_CASE(rmhmc_banana){
+template<typename real_scalar_t>
+void test_rmhmc_banana(std::string const & chn_file_name)
+{
+    using namespace mpp::dists;
     using namespace boost::numeric::ublas;
-    vector<double> v1 (3), v2 (3);
-    for (unsigned i = 0; i < std::min (v1.size (), v2.size ()); ++ i){
-        v1 (i) = v2 (i) = i;
+    using namespace mpp::hamiltonian;
+    using namespace mpp::chains;
+
+    typedef banana<real_scalar_t> banana_t;
+    typedef vector<real_scalar_t> real_vector_t;
+    typedef rm_hmc_sampler<real_scalar_t> rm_hmc_sampler_t;
+    typedef typename rm_hmc_sampler_t::log_post_func_t log_post_func_t;
+    typedef typename rm_hmc_sampler_t::grad_log_post_func_t grad_log_post_func_t;
+    typedef typename
+        rm_hmc_sampler_t::mtr_tnsr_log_post_func_t mtr_tnsr_log_post_func_t;
+    typedef typename
+        rm_hmc_sampler_t::der_mtr_tnsr_log_post_func_t
+            der_mtr_tnsr_log_post_func_t;
+    typedef std::normal_distribution<real_scalar_t> normal_distribution_t;
+    typedef std::mt19937 rng_t;
+    typedef mcmc_chain<real_scalar_t> chain_t;
+
+    real_scalar_t const theta_1_plus_theta_2_sq = 1.;
+    real_scalar_t const sigma_y = 2.;
+    real_scalar_t const sigma_theta = 1.;
+    std::size_t const num_data_points = 100;
+    std::size_t const random_seed = 12345;
+
+    banana_t bna(
+        theta_1_plus_theta_2_sq,
+        sigma_y,
+        sigma_theta,
+        num_data_points,
+        random_seed
+    );
+    using std::placeholders::_1;
+    log_post_func_t log_posterior
+        = std::bind (&banana_t::log_posterior, &bna, _1);
+    grad_log_post_func_t grad_log_posterior
+        = std::bind (&banana_t::grad_log_posterior, &bna, _1);
+    mtr_tnsr_log_post_func_t metric_tensor_log_posterior = std::bind (
+        &banana_t::metric_tensor_log_posterior,
+        &bna,
+        _1
+    );
+    der_mtr_tnsr_log_post_func_t deriv_metric_tensor_log_posterior = std::bind(
+        &banana_t::deriv_metric_tensor_log_posterior,
+        &bna,
+        _1
+    );
+
+    std::size_t const num_leap_frog_steps = 5;
+    std::size_t const num_fixed_point_steps = 5;
+    real_scalar_t const step_size = 1.2/5.;
+    std::size_t const num_dims = 2;
+    rm_hmc_sampler_t rm_hmc_spr(
+        log_posterior,
+        grad_log_posterior,
+        metric_tensor_log_posterior,
+        deriv_metric_tensor_log_posterior,
+        num_dims,
+        step_size,
+        num_leap_frog_steps,
+        num_fixed_point_steps
+    );
+
+    size_t const num_samples(2);
+    real_vector_t x_0(num_dims);
+    rng_t rng;
+    normal_distribution_t norm_dist(0,1);
+    for(std::size_t dim_i = 0; dim_i < num_dims; ++dim_i){
+        x_0(dim_i) = norm_dist(rng);
     }
-    std::cout << outer_prod (v1, v2) << std::endl;
+    chain_t chn = rm_hmc_spr.run_sampler(num_samples,x_0,rng);
+    chn.write_samples_to_csv(chn_file_name);
+    std::cout << "acc rate = " << rm_hmc_spr.acc_rate() << std::endl;
+}
+
+template<typename real_scalar_t>
+void test_hmc_banana(std::string const & chn_file_name) {
+    using namespace mpp::hamiltonian;
+    using namespace mpp::chains;
+    using namespace mpp::dists;
+    using namespace boost::numeric::ublas;
+
+    typedef banana<real_scalar_t> banana_t;
+    typedef hmc_sampler<real_scalar_t> hmc_sampler_t;
+    typedef vector<real_scalar_t> real_vector_t;
+    typedef std::normal_distribution<real_scalar_t> normal_distribution_t;
+    typedef std::mt19937 rng_t;
+    typedef mcmc_chain<real_scalar_t> chain_t;
+    typedef typename hmc_sampler_t::log_post_func_type log_post_func_t;
+    typedef typename hmc_sampler_t::grad_log_post_func_type grad_log_post_func_t;
+
+    size_t const num_dims(2);
+    real_scalar_t const theta_1_plus_theta_2_sq = 1.;
+    real_scalar_t const sigma_y = 2.;
+    real_scalar_t const sigma_theta = 1.;
+    std::size_t const num_data_points = 100;
+    std::size_t const random_seed = 12345;
+
+    banana_t bna(
+        theta_1_plus_theta_2_sq,
+        sigma_y,
+        sigma_theta,
+        num_data_points,
+        random_seed
+    );
+
+
+    using std::placeholders::_1;
+    log_post_func_t log_posterior
+        = std::bind (&banana_t::log_posterior, &bna, _1);
+
+    grad_log_post_func_t grad_log_posterior
+        = std::bind (&banana_t::grad_log_posterior, &bna, _1);
+    size_t const max_num_steps(10);
+    real_scalar_t const max_eps(0.1);
+    real_vector_t inv_mass_mat(num_dims);
+    for(size_t i=0;i<num_dims;++i) {
+        inv_mass_mat(i) = sigma_y*sigma_y*sigma_theta*sigma_theta
+            /(sigma_y*sigma_y + sigma_theta*sigma_theta);
+    }
+
+    hmc_sampler_t hmc_spr(
+        log_posterior,
+        grad_log_posterior,
+        num_dims,
+        max_num_steps,
+        max_eps,
+        inv_mass_mat
+    );
+
+    size_t const num_samples(1000);
+    rng_t rng;
+    normal_distribution_t nrm_dist;
+    real_vector_t q_0(num_dims);
+    for(size_t i=0;i<num_dims;++i) {
+        q_0(i) = nrm_dist(rng);
+    }
+    chain_t chn = hmc_spr.run_sampler(num_samples,q_0,rng);
+    chn.write_samples_to_csv(chn_file_name);
+
+}
+
+
+// BOOST_AUTO_TEST_CASE(rmhmc_banana){
+//     test_rmhmc_banana<float>(std::string("banana.float.chain"));
+//     test_rmhmc_banana<double>(std::string("banana.double.chain"));
+//     test_rmhmc_banana<long double>(std::string("banana.long-double.chain"));
+// }
+
+BOOST_AUTO_TEST_CASE(hmc_banana){
+    test_hmc_banana<float>(std::string("banana.float.chain"));
+    // test_hmc_banana<double>(std::string("banana.double.chain"));
+    // test_hmc_banana<long double>(std::string("banana.long-double.chain"));
+
 }

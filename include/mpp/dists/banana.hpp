@@ -79,9 +79,11 @@ public:
         );
         real_scalar_t const theta_1 = theta(0);
         real_scalar_t const theta_2 = theta(1);
+        BOOST_ASSERT(std::isfinite(theta_1));
+        BOOST_ASSERT(std::isfinite(theta_2));
         real_scalar_t const mu = theta_1 + theta_2*theta_2;
 
-        real_scalar_t log_pr =
+        real_scalar_t const log_pr =
             -0.5*(theta_1*theta_1 + theta_2*theta_2)
             /m_sigma_theta/m_sigma_theta;
 
@@ -93,6 +95,9 @@ public:
         }
         log_lik *= 0.5;
 
+        BOOST_ASSERT(std::isfinite(log_pr));
+        BOOST_ASSERT(std::isfinite(log_lik));
+
         return log_pr + log_lik;
     }
 
@@ -101,8 +106,9 @@ public:
             theta.size() == 2,
             "theta should be a two dimensional vector."
         );
+        using namespace boost::numeric::ublas;
         real_vector_t d_log_pr = -theta/m_sigma_theta/m_sigma_theta;
-        real_vector_t d_log_lik = scalar_vector(theta.size(),1.);
+        real_vector_t d_log_lik = scalar_vector<real_scalar_t>(theta.size(),1.);
         d_log_lik(1) = 2*theta(1);
         real_scalar_t const theta_1 = theta(0);
         real_scalar_t const theta_2 = theta(1);
@@ -120,7 +126,7 @@ public:
         );
         using namespace boost::numeric::ublas;
         real_matrix_t G(theta.size(),theta.size());
-        real_vector_t theta_tmp = scalar_vector(theta.size(),1.);
+        real_vector_t theta_tmp = scalar_vector<real_scalar_t>(theta.size(),1.);
         theta_tmp(1) = 2*theta(1);
         G = outer_prod(theta_tmp,theta_tmp);
         BOOST_ASSERT(G.size1() == 2);
@@ -131,16 +137,19 @@ public:
     }
 
     real_matrix_array_t deriv_metric_tensor_log_posterior(
-        real_vector_t const & q
+        real_vector_t const & theta
     ) const {
         BOOST_ASSERT_MSG(
             theta.size() == 2,
             "theta should be a two dimensional vector."
         );
         using namespace boost::numeric::ublas;
-        real_matrix_array_t d_G( m_var.size(),
-            zero_matrix<real_scalar_t>( m_var.size(),m_var.size() )
+        real_matrix_array_t d_G( theta.size(),
+            zero_matrix<real_scalar_t>( theta.size(),theta.size() )
         );
+        d_G[1](0,1) = 2.;
+        d_G[1](1,0) = 2.;
+        d_G[1](1,1) = 8.;
         return d_G;
     }
 

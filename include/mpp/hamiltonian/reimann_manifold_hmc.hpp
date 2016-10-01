@@ -198,19 +198,31 @@ public:
         using namespace boost::numeric::ublas;
         using namespace mpp::utils;
 
+        std::cout << "inside sv " << std::endl;
+        std::cout << "p in = " << p_new << std::endl;
+        std::cout << "x in = " << x_new << std::endl;
+
         real_scalar_t const c_e = 1e-4;
         std::size_t const num_dims = p_new.size();
 
         real_matrix_t G = mtr_tnsr_log_posterior(x_new);
+        // std::cout << "G = " << G << std::endl;
+        // std::cout << "compute_determinant " << std::endl;
         real_scalar_t det_G = compute_determinant<real_scalar_t>(G);
+        // std::cout << "det_G = " << det_G << std::endl;
         real_matrix_t invG(G);
+        // std::cout << "compute_inverse " << std::endl;
         compute_inverse<real_scalar_t>(G,invG);
+        // std::cout << "invG = " << invG << std::endl;
         real_scalar_t log_post_x0 = log_posterior(x_new);
+        BOOST_ASSERT(det_G > 0);
         real_scalar_t const H_0 = -log_post_x0 + std::log(det_G)
             + 0.5*inner_prod(p_new,prod(invG,p_new));
+        BOOST_ASSERT(std::isfinite(H_0));
 
         real_matrix_array_t d_G = drv_mtr_tnsr_log_posterior(x_new);
         for(std::size_t lf_i = 0; lf_i < num_leap_frog_steps ; ++lf_i){
+            std::cout << "\n--------------------leap frog step = " << lf_i << std::endl;
             real_matrix_array_t invG_dG_invG(d_G.size());
             real_vector_t tr_invG_dG(num_dims);
             for(std::size_t dim_i = 0; dim_i < num_dims; ++dim_i ){
@@ -218,7 +230,9 @@ public:
                 real_matrix_t invG_dG_invG_i = prod(invG,d_G_i);
                 tr_invG_dG(dim_i)
                     = compute_trace<real_scalar_t>(invG_dG_invG_i);
+                std::cout << "tr_invG_dG(dim_i) = " << tr_invG_dG << std::endl;
                 invG_dG_invG_i = prod(invG_dG_invG_i,invG);
+                std::cout << "invG_dG_invG_i = " << dim_i << "\t" << invG_dG_invG_i << std::endl;
                 invG_dG_invG[dim_i] = invG_dG_invG_i;
             }
 
@@ -226,16 +240,19 @@ public:
             real_scalar_t norm_p_0 = norm_2(p_0);
             real_vector_t pT_invG_dG_invG_p(num_dims);
             for(std::size_t fp_i = 0; fp_i < num_fixed_point_steps; ++fp_i){
+                std::cout << "===========fixed_point_step " << fp_i << std::endl;
                 for(std::size_t dim_i = 0; dim_i < num_dims; ++ dim_i) {
                     real_matrix_t invG_dG_invG_i = invG_dG_invG[dim_i];
                     pT_invG_dG_invG_p(dim_i)
                         = inner_prod( p_new, prod(invG_dG_invG_i,p_new) );
+                    std::cout << "pT_invG_dG_invG_p(dim_i) = " << pT_invG_dG_invG_p(dim_i)<< std::endl;
                 }
                 p_new = p_0 - step_size*0.5*(
                     -grad_log_posterior(x_new)
                     + 0.5*tr_invG_dG
                     - 0.5*pT_invG_dG_invG_p
                 );
+                std::cout << "p_new = " << p_new << std::endl;
                 real_scalar_t norm_p_new = norm_2(p_new);
                 if( norm_2(p_0/norm_p_0 - p_new/norm_p_new) < c_e ){
                     std::cout << " p break at " << fp_i << "\t" << std::endl;
@@ -247,11 +264,16 @@ public:
             real_matrix_t invG_new(invG);
             real_scalar_t norm_x_0 = norm_2(x_0);
             for(std::size_t fp_i = 0; fp_i < num_fixed_point_steps; ++fp_i){
+                std::cout << "===========fixed_point_step " << fp_i << std::endl;
                 real_vector_t prod_invG_invG_new_p_new = prod(invG+invG_new,p_new);
+                std::cout << "prod_invG_invG_new_p_new = " << prod_invG_invG_new_p_new << std::endl;
                 x_new = x_0 + step_size*0.5*( prod_invG_invG_new_p_new );
+                std::cout << "x_new " << x_new << std::endl;
                 // TODO check for nans here.
                 G = mtr_tnsr_log_posterior(x_new);
+                std::cout << "G new = " << G << std::endl;
                 compute_inverse<real_scalar_t>(G,invG_new);
+                std::cout << "invG_new = " << invG_new << std::endl;
                 real_scalar_t norm_x_new = norm_2(x_new);
                 if( norm_2(x_0/norm_x_0 - x_new/norm_x_new) < c_e ){
                     std::cout << " x break at " << fp_i << "\t" << std::endl;
@@ -280,13 +302,17 @@ public:
                 + 0.5*tr_invG_dG
                 - 0.5*pT_invG_dG_invG_p
             );
+            std::cout << "p_new = " << p_new << std::endl;
         }
-
-        real_scalar_t log_post_x_new = log_posterior(x_new);
+        // std::cout << "x_new = " << x_new << std::endl;
+        real_scalar_t const log_post_x_new = log_posterior(x_new);
+        BOOST_ASSERT(std::isfinite(log_post_x_new));
         det_G = compute_determinant<real_scalar_t>(G);
-        real_scalar_t H_new = -log_post_x_new + std::log(det_G)
+        BOOST_ASSERT(det_G>0);
+        real_scalar_t const H_new = -log_post_x_new + std::log(det_G)
             + 0.5*inner_prod(p_new,prod(invG,p_new));
-
+        BOOST_ASSERT(std::isfinite(H_new));
+        std::cout << "-H_new + H_0 = " << -H_new + H_0 << std::endl;
         return -H_new + H_0;
     }
 
