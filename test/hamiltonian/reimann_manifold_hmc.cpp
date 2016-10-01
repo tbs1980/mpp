@@ -240,7 +240,7 @@ void test_rmhmc_banana(std::string const & chn_file_name)
         num_fixed_point_steps
     );
 
-    size_t const num_samples(2);
+    size_t const num_samples(1000);
     real_vector_t x_0(num_dims);
     rng_t rng;
     normal_distribution_t norm_dist(0,1);
@@ -320,15 +320,15 @@ void test_hmc_banana(std::string const & chn_file_name) {
 }
 
 
-// BOOST_AUTO_TEST_CASE(rmhmc_banana){
-//     test_rmhmc_banana<float>(std::string("banana.float.chain"));
-//     test_rmhmc_banana<double>(std::string("banana.double.chain"));
-//     test_rmhmc_banana<long double>(std::string("banana.long-double.chain"));
-// }
-
-BOOST_AUTO_TEST_CASE(hmc_banana){
-    test_hmc_banana<float>(std::string("banana.float.chain"));
-    // test_hmc_banana<double>(std::string("banana.double.chain"));
-    // test_hmc_banana<long double>(std::string("banana.long-double.chain"));
-
+BOOST_AUTO_TEST_CASE(rmhmc_banana){
+    test_rmhmc_banana<float>(std::string("banana.float.chain"));
+    // test_rmhmc_banana<double>(std::string("banana.double.chain"));
+    // test_rmhmc_banana<long double>(std::string("banana.long-double.chain"));
 }
+
+// BOOST_AUTO_TEST_CASE(hmc_banana){
+//     test_hmc_banana<float>(std::string("banana.float.chain"));
+//     test_hmc_banana<double>(std::string("banana.double.chain"));
+//     test_hmc_banana<long double>(std::string("banana.long-double.chain"));
+//
+// }
