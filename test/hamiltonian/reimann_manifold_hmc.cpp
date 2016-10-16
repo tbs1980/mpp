@@ -120,21 +120,23 @@ void test_rmhmc(std::string const & chn_file_name){
     typedef mcmc_chain<real_scalar_t> chain_t;
 
     size_t const num_dims(10);
-    scalar_vector<real_scalar_t> mean(num_dims,0.);
-    scalar_vector<real_scalar_t> var(num_dims,1.);
-    diag_multivar_normal_t dmn(mean,var);
+    scalar_vector<real_scalar_t> mean(num_dims, 0.);
+    scalar_vector<real_scalar_t> var(num_dims, 1.);
+    diag_multivar_normal_t dmn(mean, var);
     using std::placeholders::_1;
     log_post_func_t log_posterior
-        = std::bind (&diag_multivar_normal_t::log_posterior,&dmn,_1);
+        = std::bind (&diag_multivar_normal_t::log_posterior, &dmn, _1);
     grad_log_post_func_t grad_log_posterior
-        = std::bind (&diag_multivar_normal_t::grad_log_posterior,&dmn,_1);
+        = std::bind (&diag_multivar_normal_t::grad_log_posterior, &dmn, _1);
     mtr_tnsr_log_post_func_t metric_tensor_log_posterior = std::bind (
         &diag_multivar_normal_t::metric_tensor_log_posterior,
-        &dmn,_1
+        &dmn,
+        _1
     );
     der_mtr_tnsr_log_post_func_t deriv_metric_tensor_log_posterior = std::bind(
         &diag_multivar_normal_t::deriv_metric_tensor_log_posterior,
-        &dmn,_1
+        &dmn,
+        _1
     );
     std::size_t const num_leap_frog_steps = 6;
     std::size_t const num_fixed_point_steps = 4;
@@ -201,13 +203,15 @@ void test_rmhmc_banana(std::string const & chn_file_name)
     real_scalar_t const sigma_theta = 1.;
     std::size_t const num_data_points = 100;
     std::size_t const random_seed = 12345;
+    bool const force_diag_metric_tensor = false;
 
     banana_t bna(
         theta_1_plus_theta_2_sq,
         sigma_y,
         sigma_theta,
         num_data_points,
-        random_seed
+        random_seed,
+        force_diag_metric_tensor
     );
     using std::placeholders::_1;
     log_post_func_t log_posterior
@@ -227,7 +231,7 @@ void test_rmhmc_banana(std::string const & chn_file_name)
 
     std::size_t const num_leap_frog_steps = 5;
     std::size_t const num_fixed_point_steps = 5;
-    real_scalar_t const step_size = 1.2/5.;
+    real_scalar_t const step_size = 1.2/50.;
     std::size_t const num_dims = 2;
     rm_hmc_sampler_t rm_hmc_spr(
         log_posterior,

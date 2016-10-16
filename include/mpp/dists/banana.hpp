@@ -33,12 +33,14 @@ public:
         real_scalar_t const sigma_y,
         real_scalar_t const sigma_theta,
         std::size_t const num_data_points,
-        std::size_t random_seed
+        std::size_t random_seed,
+        bool const force_diag_metric_tensor
     )
     : m_theta_1_plus_theta_2_sq(theta_1_plus_theta_2_sq)
     , m_sigma_y(sigma_y)
     , m_sigma_theta(sigma_theta)
     , m_num_data_points(num_data_points)
+    , m_force_diag_metric_tensor(force_diag_metric_tensor)
     {
         if( m_sigma_y < 0 ) {
             std::stringstream msg;
@@ -131,8 +133,26 @@ public:
         G = outer_prod(theta_tmp,theta_tmp);
         BOOST_ASSERT(G.size1() == 2);
         BOOST_ASSERT(G.size2() == 2);
+
+        G *=  m_num_data_points/m_sigma_y/m_sigma_y;
+
         G(0,0) += 1./m_sigma_theta/m_sigma_theta;
         G(1,1) += 1./m_sigma_theta/m_sigma_theta;
+
+        // make it diagonal for testing
+        if( m_force_diag_metric_tensor ){
+            G(0,1) = 0.;
+            G(1,0) = 0.;
+        }
+
+        // for the formalisam that contains hessian only
+        // G(0,0) = 1.;
+        // G(0,1) = 2.;
+        // G(1,0) = 2.*theta(1);
+        // G(1,1) = 4.*theta(1);
+        // G *=  m_num_data_points/m_sigma_y/m_sigma_y;
+
+
         return G;
     }
 
@@ -150,6 +170,23 @@ public:
         d_G[1](0,1) = 2.;
         d_G[1](1,0) = 2.;
         d_G[1](1,1) = 8.*theta(1);
+
+        d_G[1] *= m_num_data_points/m_sigma_y/m_sigma_y;
+
+        // make it diagonal for testing
+        if( m_force_diag_metric_tensor ){
+            d_G[1](0,1) = 0.;
+            d_G[1](1,0) = 0.;
+        }
+
+        // for the formalisam that contains hessian only
+        // d_G[1](0,0) = 0.;
+        // d_G[1](0,1) = 0.;
+        // d_G[1](1,0) = 2.;
+        // d_G[1](1,1) = 4.;
+        // d_G[1] *= m_num_data_points/m_sigma_y/m_sigma_y;
+
+
         return d_G;
     }
 
@@ -159,6 +196,7 @@ private:
     real_scalar_t m_sigma_theta;
     std::size_t m_num_data_points;
     real_vector_t m_data_y;
+    bool m_force_diag_metric_tensor;
 };
 
 }}
