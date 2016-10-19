@@ -15,7 +15,9 @@ endif()
 
 string(TOLOWER "${CMAKE_BUILD_TYPE}" cmake_build_type_tolower)
 if(NOT cmake_build_type_tolower STREQUAL "debug" AND NOT cmake_build_type_tolower STREQUAL "release")
-    message(FATAL_ERROR "Unknown build type \"${CMAKE_BUILD_TYPE}\". Allowed values are Debug and Release.")
+#    message(FATAL_ERROR "Unknown build type \"${CMAKE_BUILD_TYPE}\". Allowed values are Debug and Release.")
+    message(WARNING "Unknown build type \"${CMAKE_BUILD_TYPE}\". Setting the build type to debug" )
+#    set(CMAKE_BUILD_TYPE "Debug")
 endif()
 
 include(set_compiler_flags)
