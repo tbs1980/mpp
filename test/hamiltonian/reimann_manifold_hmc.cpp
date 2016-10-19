@@ -278,13 +278,15 @@ void test_hmc_banana(std::string const & chn_file_name) {
     real_scalar_t const sigma_theta = 1.;
     std::size_t const num_data_points = 100;
     std::size_t const random_seed = 12345;
+    bool const force_diag_metric_tensor = false;
 
     banana_t bna(
         theta_1_plus_theta_2_sq,
         sigma_y,
         sigma_theta,
         num_data_points,
-        random_seed
+        random_seed,
+        force_diag_metric_tensor
     );
 
 
