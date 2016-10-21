@@ -89,29 +89,60 @@ private:
 };
 
 template<typename real_scalar_t>
-void test_log_post_taylor_2008(std::string const & chn_file_name){
+void test_log_post_taylor_2008_hmc(std::string const & chn_file_name){
     using namespace boost::numeric::ublas;
     using namespace mpp::hamiltonian;
     using namespace mpp::chains;
 
-    typedef log_post_taylor_2008_2d<real_scalar_t> log_post_taylor_2008_2d_type;
+    typedef log_post_taylor_2008_2d<real_scalar_t> log_post_taylor_2008_2d_t;
     typedef vector<real_scalar_t> real_vector_t;
-    typedef rm_hmc_sampler<real_scalar_t> rm_hmc_sampler_t;
-    typedef typename rm_hmc_sampler_t::log_post_func_t log_post_func_t;
-    typedef typename rm_hmc_sampler_t::grad_log_post_func_t grad_log_post_func_t;
-    typedef typename
-    rm_hmc_sampler_t::mtr_tnsr_log_post_func_t mtr_tnsr_log_post_func_t;
-    typedef typename
-    rm_hmc_sampler_t::der_mtr_tnsr_log_post_func_t
-            der_mtr_tnsr_log_post_func_t;
+    typedef hmc_sampler<real_scalar_t> hmc_sampler_t;
+    typedef vector<real_scalar_t> real_vector_t;
     typedef std::normal_distribution<real_scalar_t> normal_distribution_t;
     typedef std::mt19937 rng_t;
     typedef mcmc_chain<real_scalar_t> chain_t;
+    typedef typename hmc_sampler_t::log_post_func_type log_post_func_t;
+    typedef typename hmc_sampler_t::grad_log_post_func_type grad_log_post_func_t;
+
+    size_t const num_dims(2);
+    real_scalar_t const N = 1.;
+    real_scalar_t const d = 3.;
+    log_post_taylor_2008_2d_t  lp_tlr_08(N,d);
+
+    using std::placeholders::_1;
+    log_post_func_t log_posterior
+            = std::bind (&log_post_taylor_2008_2d_t::log_posterior, &lp_tlr_08, _1);
+
+    grad_log_post_func_t grad_log_posterior
+            = std::bind (&log_post_taylor_2008_2d_t::grad_log_posterior, &lp_tlr_08, _1);
+    size_t const max_num_steps(10);
+    real_scalar_t const max_eps(0.1);
+    real_vector_t inv_mass_mat(num_dims);
+    inv_mass_mat(0) = 1. ;
+    inv_mass_mat(1) = 10.;
+
+    hmc_sampler_t hmc_spr(
+            log_posterior,
+            grad_log_posterior,
+            num_dims,
+            max_num_steps,
+            max_eps,
+            inv_mass_mat
+    );
+
+    size_t const num_samples(1000);
+    rng_t rng;
+    real_vector_t q_0(num_dims);
+    for(size_t i=0;i<num_dims;++i) {
+        q_0(i) = 0.1;
+    }
+    chain_t chn = hmc_spr.run_sampler(num_samples,q_0,rng);
+    chn.write_samples_to_csv(chn_file_name);
 
 }
 
 BOOST_AUTO_TEST_CASE(log_post_taylor_2008){
-     test_log_post_taylor_2008<float>(std::string("banana.float.chain"));
+    test_log_post_taylor_2008_hmc<float>(std::string("lp_tlr_08.float.chain"));
     // test_rmhmc_banana<double>(std::string("banana.double.chain"));
     // test_rmhmc_banana<long double>(std::string("banana.long-double.chain"));
 }
