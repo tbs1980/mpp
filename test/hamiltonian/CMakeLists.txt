@@ -20,3 +20,13 @@ add_compute_test(
     "hamiltonian.log_post_taylor_2008_2d"
     log_post_taylor_2008_2d.cpp
 )
+
+add_compute_test(
+    "hamiltonian.log_post_balan_2016_2d"
+    log_post_balan_2016_2d.cpp
+)
+
+add_compute_test(
+    "hamiltonian.log_post_wandelt_2004_2d"
+    log_post_wandelt_2004_2d.cpp
+)
