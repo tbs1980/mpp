@@ -284,7 +284,7 @@ public:
         real_scalar_t const log_post_x_new = log_posterior(x_new);
         BOOST_ASSERT(std::isfinite(log_post_x_new));
         det_G = compute_determinant<real_scalar_t>(G);
-        BOOST_ASSERT(det_G>0);
+        BOOST_ASSERT(det_G>=0);
         real_scalar_t const H_new = -log_post_x_new + std::log(det_G)
             + 0.5*inner_prod(p_new,prod(invG,p_new));
         BOOST_ASSERT(std::isfinite(H_new));

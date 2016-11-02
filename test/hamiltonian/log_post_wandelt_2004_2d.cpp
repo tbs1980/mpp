@@ -11,6 +11,7 @@
 #include <limits>
 #include <string>
 #include <cmath>
+#include <exception>
 #include <mpp/dists/multivariate_normal.hpp>
 #include <mpp/dists/banana.hpp>
 #include <mpp/hamiltonian/reimann_manifold_hmc.hpp>
@@ -50,10 +51,18 @@ public:
     real_scalar_t log_posterior(real_vector_t const & x) const {
         real_scalar_t const a  = x(0);
         real_scalar_t const C = x(1);
+        // std::cout << x << std::endl;
         // BOOST_ASSERT_MSG(C > 0., "C should be a real number > 0");
-        if(C <= 0. or C > 20.){
-            return -std::numeric_limits<real_scalar_t>::max();
+        if(C <= 0. and C > 2000.){
+            // return -std::numeric_limits<real_scalar_t>::max();
+            std::string msg("C out of range. It should be 0<C<20.");
+            throw std::invalid_argument(msg);
         }
+        // if(std::isfinite(a)==false || std::isfinite(C)==false || C <=0. or C>20.){
+        //     std::string msg("C out of range. It should be 0<C<20.");
+        //     throw std::invalid_argument(msg);
+        // }
+
         return -0.5*(m_d - a)*(m_d - a)/m_N - 0.5*std::log(C) - 0.5*a*a/C;
     }
 
@@ -61,10 +70,15 @@ public:
         real_scalar_t const a  = x(0);
         real_scalar_t const C = x(1);
         // BOOST_ASSERT_MSG(C > 0., "C should be a real number > 0");
+        if(C <= 0. and C > 2000.){
+            std::string msg("C out of range. It should be 0<C<20.");
+            throw std::invalid_argument(msg);
+        }
         real_vector_t d_x(2);
         // if(C <= 0. ){
-        //     d_x(0) -std::numeric_limits<real_scalar_t>::max();
-        //     d_x(1) = -std::numeric_limits<real_scalar_t>::max();
+        //     d_x(0) = 0.;
+        //     d_x(1) = 0.;
+        //     return d_x;
         // }
         real_scalar_t const d_a = (m_d - a)/m_N - a/C;
         real_scalar_t const d_C = -0.5/C + 0.5*a*a/C/C;
@@ -76,12 +90,25 @@ public:
     real_matrix_t metric_tensor_log_posterior(real_vector_t const & x)const {
         real_scalar_t const a  = x(0);
         real_scalar_t const C = x(1);
-        BOOST_ASSERT_MSG(C > 0., "C should be a real number > 0");
+        // BOOST_ASSERT_MSG(C > 0., "C should be a real number > 0");
+        if(C <= 0. and C > 2000.){
+            std::string msg("C out of range. It should be 0<C<20.");
+            throw std::invalid_argument(msg);
+        }
         real_matrix_t mtr_tnsr(2,2);
+        // if(C <= 0. ){
+        //     mtr_tnsr(0,0) = 1e-20;
+        //     mtr_tnsr(1,0) = 0.;
+        //     mtr_tnsr(0,1) = 0.;
+        //     mtr_tnsr(1,1) = 1e-20;
+        //     return mtr_tnsr;
+        // }
         mtr_tnsr(0,0) = 1./m_N + 1./C;
         mtr_tnsr(1,0) = -a/C/C;
         mtr_tnsr(0,1) = -a/C/C;
         mtr_tnsr(1,1) = a*a/C/C/C - 0.5/C/C;
+
+        return mtr_tnsr;
     }
 
     real_matrix_array_t deriv_metric_tensor_log_posterior(
@@ -89,19 +116,36 @@ public:
     ) const {
         real_scalar_t const a  = x(0);
         real_scalar_t const C = x(1);
-        BOOST_ASSERT_MSG(C > 0., "C should be a real number > 0");
+        // BOOST_ASSERT_MSG(C > 0., "C should be a real number > 0");
+        if(C <= 0. and C > 2000.){
+            std::string msg("C out of range. It should be 0<C<20.");
+            throw std::invalid_argument(msg);
+        }
         real_matrix_array_t drv_mtr_tnsr( x.size(),
             real_matrix_t( x.size(),x.size() )
         );
+        // if(C <= 0. ){
+        //     drv_mtr_tnsr[0](0,0) = 1e-20;
+        //     drv_mtr_tnsr[0](0,1) = 0.;
+        //     drv_mtr_tnsr[0](1,0) = 0.;
+        //     drv_mtr_tnsr[0](1,1) = 1e-20;
+        //
+        //     drv_mtr_tnsr[1](0,0) = 1e-20;
+        //     drv_mtr_tnsr[1](0,1) = 0.;
+        //     drv_mtr_tnsr[1](1,0) = 0.;
+        //     drv_mtr_tnsr[1](1,1) = 1e-20;
+        //
+        //     return drv_mtr_tnsr;
+        // }
         drv_mtr_tnsr[0](0,0) = 0.;
-        drv_mtr_tnsr[0](0,1) = -2.*a/C/C;
-        drv_mtr_tnsr[0](1,0) = -2.*a/C/C;
+        drv_mtr_tnsr[0](0,1) = -1./C/C;
+        drv_mtr_tnsr[0](1,0) = -1./C/C;
         drv_mtr_tnsr[0](1,1) = 2.*a/C/C/C;
 
         drv_mtr_tnsr[1](0,0) = -1./C/C;
-        drv_mtr_tnsr[1](0,1) = 2.*a*a/C/C/C;
-        drv_mtr_tnsr[1](1,0) = 2.*a*a/C/C/C;
-        drv_mtr_tnsr[1](1,1) = 3.*a*a/C/C/C/C + 1./C/C/C;
+        drv_mtr_tnsr[1](0,1) = 2.*a/C/C/C;
+        drv_mtr_tnsr[1](1,0) = 2.*a/C/C/C;
+        drv_mtr_tnsr[1](1,1) = -3.*a*a/C/C/C/C + 1./C/C/C;
 
         return drv_mtr_tnsr;
 
@@ -130,14 +174,14 @@ void test_log_post_wandelt_2004_hmc(std::string const & chn_file_name){
     size_t const num_dims(2);
     real_scalar_t const N = 1.;
     real_scalar_t const d = 3.;
-    log_post_t  lp_tlr_08(N,d);
+    log_post_t  lp_wdt_04(N,d);
 
     using std::placeholders::_1;
     log_post_func_t log_posterior
-            = std::bind (&log_post_t::log_posterior, &lp_tlr_08, _1);
+            = std::bind (&log_post_t::log_posterior, &lp_wdt_04, _1);
 
     grad_log_post_func_t grad_log_posterior
-            = std::bind (&log_post_t::grad_log_posterior, &lp_tlr_08, _1);
+            = std::bind (&log_post_t::grad_log_posterior, &lp_wdt_04, _1);
     size_t const max_num_steps(10);
     real_scalar_t const max_eps(1.);
     real_vector_t inv_mass_mat(num_dims);
@@ -163,8 +207,75 @@ void test_log_post_wandelt_2004_hmc(std::string const & chn_file_name){
 
 }
 
+template<typename real_scalar_t>
+void test_log_post_wandelt_2004_rmhmc(std::string const & chn_file_name){
+    using namespace boost::numeric::ublas;
+    using namespace mpp::hamiltonian;
+    using namespace mpp::chains;
+
+    typedef log_post_wandelt_2004_2d<real_scalar_t> log_post_t;
+    typedef vector<real_scalar_t> real_vector_t;
+    typedef rm_hmc_sampler<real_scalar_t> rm_hmc_sampler_t;
+    typedef vector<real_scalar_t> real_vector_t;
+    typedef std::mt19937 rng_t;
+    typedef mcmc_chain<real_scalar_t> chain_t;
+    typedef typename rm_hmc_sampler_t::log_post_func_t log_post_func_t;
+    typedef typename rm_hmc_sampler_t::grad_log_post_func_t grad_log_post_func_t;
+    typedef typename
+        rm_hmc_sampler_t::mtr_tnsr_log_post_func_t mtr_tnsr_log_post_func_t;
+    typedef typename
+        rm_hmc_sampler_t::der_mtr_tnsr_log_post_func_t
+            der_mtr_tnsr_log_post_func_t;
+
+    real_scalar_t const N = 1.;
+    real_scalar_t const d = 3.;
+    log_post_t  lp_wdt_04(N,d);
+
+    using std::placeholders::_1;
+    log_post_func_t log_posterior
+        = std::bind (&log_post_t::log_posterior, &lp_wdt_04, _1);
+    grad_log_post_func_t grad_log_posterior
+        = std::bind (&log_post_t::grad_log_posterior, &lp_wdt_04, _1);
+    mtr_tnsr_log_post_func_t metric_tensor_log_posterior = std::bind (
+        &log_post_t::metric_tensor_log_posterior,
+        &lp_wdt_04,
+        _1
+    );
+    der_mtr_tnsr_log_post_func_t deriv_metric_tensor_log_posterior = std::bind(
+        &log_post_t::deriv_metric_tensor_log_posterior,
+        &lp_wdt_04,
+        _1
+    );
+
+    std::size_t const num_leap_frog_steps = 5;
+    std::size_t const num_fixed_point_steps = 5;
+    real_scalar_t const step_size = 1.2/100.;
+    std::size_t const num_dims = 2;
+    rm_hmc_sampler_t rm_hmc_spr(
+        log_posterior,
+        grad_log_posterior,
+        metric_tensor_log_posterior,
+        deriv_metric_tensor_log_posterior,
+        num_dims,
+        step_size,
+        num_leap_frog_steps,
+        num_fixed_point_steps
+    );
+
+    size_t const num_samples(10000);
+    rng_t rng;
+    real_vector_t q_0(num_dims);
+    q_0(0) = 2.2;
+    q_0(1) = 4.8;
+    chain_t chn = rm_hmc_spr.run_sampler(num_samples,q_0,rng);
+    chn.write_samples_to_csv(chn_file_name);
+
+}
+
+
 BOOST_AUTO_TEST_CASE(log_post_wandelt_2004){
-    test_log_post_wandelt_2004_hmc<float>(std::string("lp_wdt_04.float.chain"));
-    // test_rmhmc_banana<double>(std::string("banana.double.chain"));
-    // test_rmhmc_banana<long double>(std::string("banana.long-double.chain"));
+    // test_log_post_wandelt_2004_hmc<float>(std::string("lp_wdt_04.float.chain"));
+    test_log_post_wandelt_2004_rmhmc<float>(
+        std::string("rmhmc_lp_wdt_04.float.chain")
+    );
 }
