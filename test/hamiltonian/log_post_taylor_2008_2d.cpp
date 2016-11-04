@@ -48,17 +48,20 @@ public:
     }
 
     real_scalar_t log_posterior(real_vector_t const & x) const {
-        std::cout << "x = " << x << std::endl;
+        std::cout << "@log_posterior x = " << x << std::endl;
         real_scalar_t const a  = x(0);
         real_scalar_t const G = x(1);
-        return -0.5*(m_d - a)*(m_d - a)/m_N - 0.5*G - 0.5*a*a*std::exp(-G) + G;
+        real_scalar_t const exp_neg_G = std::exp(-G);
+        std::cout << "exp(-G) = " << exp_neg_G << std::endl;
+        return -0.5*(m_d - a)*(m_d - a)/m_N  - 0.5*a*a*std::exp(-G) + 0.5*G;
     }
 
     real_vector_t grad_log_posterior(real_vector_t const & x) const {
+        std::cout << "@grad_log_posterior x = " << x << std::endl;
         real_scalar_t const a  = x(0);
         real_scalar_t const G = x(1);
         real_scalar_t const d_a = (m_d - a)/m_N - a*std::exp(-G);
-        real_scalar_t const d_G = -0.5 +0.5*a*a*std::exp(-G) + 1.;
+        real_scalar_t const d_G = 0.5 +0.5*a*a*std::exp(-G) ;
         real_vector_t d_x(2);
         d_x(0) = d_a;
         d_x(1) = d_G;
@@ -66,6 +69,7 @@ public:
     }
 
     real_matrix_t metric_tensor_log_posterior(real_vector_t const & x)const {
+        std::cout << "@metric_tensor_log_posterior x = " << x << std::endl;
         real_scalar_t const a  = x(0);
         real_scalar_t const G = x(1);
         real_matrix_t mtr_tnsr(2,2);
@@ -80,6 +84,7 @@ public:
     real_matrix_array_t deriv_metric_tensor_log_posterior(
         real_vector_t const & x
     ) const {
+        std::cout << "@deriv_metric_tensor_log_posterior x = " << x << std::endl;
         real_scalar_t const a  = x(0);
         real_scalar_t const G = x(1);
         real_scalar_t const exp_neg_G = std::exp(-G);
@@ -199,7 +204,7 @@ void test_log_post_taylor_2008_rmhmc(std::string const & chn_file_name){
 
     std::size_t const num_leap_frog_steps = 5;
     std::size_t const num_fixed_point_steps = 5;
-    real_scalar_t const step_size = 1.2/60.;
+    real_scalar_t const step_size = 1.;
     std::size_t const num_dims = 2;
     rm_hmc_sampler_t rm_hmc_spr(
         log_posterior,
