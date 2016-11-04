@@ -205,7 +205,6 @@ public:
         real_scalar_t det_G = compute_determinant<real_scalar_t>(G);
         real_matrix_t invG(G);
         compute_inverse<real_scalar_t>(G,invG);
-        std::cout << "invG = " << invG << std::endl;
         real_scalar_t log_post_x0 = log_posterior(x_new);
         BOOST_ASSERT(det_G > 0);
         real_scalar_t const H_0 = -log_post_x0 + std::log(det_G)
@@ -239,7 +238,6 @@ public:
                     + 0.5*tr_invG_dG
                     - 0.5*pT_invG_dG_invG_p
                 );
-                std::cout << "p_new = " << p_new << std::endl;
                 real_scalar_t norm_p_new = norm_2(p_new);
                 if( norm_2(p_0/norm_p_0 - p_new/norm_p_new) < c_e ){
                     break;
