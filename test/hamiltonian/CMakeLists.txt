@@ -30,3 +30,10 @@ add_compute_test(
     "hamiltonian.log_post_wandelt_2004_2d"
     log_post_wandelt_2004_2d.cpp
 )
+
+add_compute_test(
+        "hamiltonian.norm_dist_as_invar_dens_rmhmc"
+        norm_dist_as_invar_dens_rmhmc.cpp
+)
+
+
