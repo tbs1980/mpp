@@ -110,7 +110,7 @@ public:
         mtr_tnsr(0,0) = 1./m_N + 1./C;
         mtr_tnsr(1,0) = 0;//-a/C/C;
         mtr_tnsr(0,1) = 0;//-a/C/C;
-        mtr_tnsr(1,1) = 1./C;//a*a/C/C/C - 0.5/C/C;
+        mtr_tnsr(1,1) = 2./C;//a*a/C/C/C - 0.5/C/C;
 
         return mtr_tnsr;
     }
@@ -149,7 +149,7 @@ public:
         drv_mtr_tnsr[1](0,0) = -1./C/C;
         drv_mtr_tnsr[1](0,1) = 0.;//2.*a/C/C/C;
         drv_mtr_tnsr[1](1,0) = 0.;//2.*a/C/C/C;
-        drv_mtr_tnsr[1](1,1) = -1./C/C;//-3.*a*a/C/C/C/C + 1./C/C/C;
+        drv_mtr_tnsr[1](1,1) = -2./C/C;//-3.*a*a/C/C/C/C + 1./C/C/C;
 
         return drv_mtr_tnsr;
 
@@ -253,7 +253,7 @@ void test_log_post_wandelt_2004_rmhmc(std::string const & chn_file_name){
 
     std::size_t const num_leap_frog_steps = 5;
     std::size_t const num_fixed_point_steps = 5;
-    real_scalar_t const step_size = 0.07;
+    real_scalar_t const step_size = 0.1;
     std::size_t const num_dims = 2;
     rm_hmc_sampler_t rm_hmc_spr(
         log_posterior,
@@ -266,7 +266,7 @@ void test_log_post_wandelt_2004_rmhmc(std::string const & chn_file_name){
         num_fixed_point_steps
     );
 
-    size_t const num_samples(5000);
+    size_t const num_samples(3000);
     rng_t rng;
     real_vector_t q_0(num_dims);
     q_0(0) = 2.2;
@@ -279,8 +279,8 @@ void test_log_post_wandelt_2004_rmhmc(std::string const & chn_file_name){
 
 
 BOOST_AUTO_TEST_CASE(log_post_wandelt_2004){
-     test_log_post_wandelt_2004_hmc<float>(std::string("lp_wdt_04.float.chain"));
-//    test_log_post_wandelt_2004_rmhmc<float>(
-//        std::string("rmhmc_lp_wdt_04.float.chain")
-//    );
+    //  test_log_post_wandelt_2004_hmc<float>(std::string("lp_wdt_04.float.chain"));
+   test_log_post_wandelt_2004_rmhmc<float>(
+       std::string("rmhmc_lp_wdt_04.float.chain")
+   );
 }
