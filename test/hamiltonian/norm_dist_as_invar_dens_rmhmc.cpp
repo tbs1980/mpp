@@ -361,7 +361,7 @@ public:
         real_scalar_t const mu = x(0);
         real_scalar_t const C = x(1);
         real_vector_t d_x(x.size());
-        real_scalar_t d_mu = ( sum(m_data_x) - m_num_data_points*mu )/C;
+        real_scalar_t d_mu = ( sum(m_data_x) - m_num_data_points*mu )/(C + m_N_fid);
         real_scalar_t d_C = 0;
         for(std::size_t dim_i = 0; dim_i < m_data_x.size(); ++dim_i){
             real_scalar_t const diff = m_data_x(dim_i) - mu;
@@ -466,8 +466,143 @@ void test_normal_distribution_C_and_N(std::string const & chn_file_name){
 
 }
 
+template<typename  _real_scalar_t>
+class two_normal_distributions_mu_only{
+public:
+    typedef _real_scalar_t real_scalar_t;
+    typedef boost::numeric::ublas::vector<real_scalar_t> real_vector_t;
+    typedef boost::numeric::ublas::matrix<real_scalar_t> real_matrix_t;
+    typedef boost::numeric::ublas::unbounded_array<real_matrix_t> real_matrix_array_t;
+    typedef std::mt19937 rng_t;
+    typedef std::normal_distribution<real_scalar_t> normal_distribution_t;
+
+    two_normal_distributions_mu_only(real_scalar_t const mu_fid,
+                        real_scalar_t const C_fid,
+                        real_scalar_t const N_fid,
+                        std::size_t const num_data_points,
+                        std::size_t const random_seed
+    )
+    :m_mu_fid(mu_fid)
+    ,m_C_fid(C_fid)
+    ,m_N_fid(N_fid)
+    ,m_num_data_points(num_data_points) {
+        m_data_x = real_vector_t(m_num_data_points);
+        rng_t rng(random_seed);
+        normal_distribution_t nrm_dist(m_mu_fid, std::sqrt(m_N_fid));
+        for(std::size_t dim_i = 0; dim_i < m_data_x.size(); ++dim_i){
+            m_data_x(dim_i) = nrm_dist(rng);
+        }
+    }
+    ~two_normal_distributions_mu_only(){
+
+    }
+
+    real_scalar_t log_posterior(real_vector_t const & x) const {
+        real_scalar_t const mu = x(0);
+        real_scalar_t log_lik(0);
+        for(std::size_t dim_i = 0; dim_i < m_data_x.size(); ++dim_i) {
+            real_scalar_t const diff = m_data_x(dim_i) - mu;
+            log_lik -= diff*diff;
+        }
+        log_lik *= 0.5/(m_N_fid);
+        log_lik -= 0.5*m_num_data_points*std::log(m_N_fid);
+        real_scalar_t log_prior = -0.5*std::log(m_C_fid) -0.5*mu*mu/m_C_fid;
+        return log_lik + log_prior;
+    }
+
+    real_vector_t grad_log_posterior(real_vector_t const & x) const {
+        real_scalar_t const mu = x(0);
+        real_vector_t d_x(x.size());
+        real_scalar_t d_mu = ( sum(m_data_x) - m_num_data_points*mu )/m_N_fid - mu/m_C_fid;
+        d_x(0) = d_mu;
+        return d_x;
+    }
+
+    real_matrix_t metric_tensor_log_posterior(real_vector_t const & x)const {
+        real_matrix_t G(x.size(),x.size());
+        G(0,0) = m_num_data_points/m_N_fid + 1./m_C_fid;
+        return G;
+    }
+
+    real_matrix_array_t deriv_metric_tensor_log_posterior(real_vector_t const & x ) const {
+        using namespace boost::numeric::ublas;
+        real_matrix_array_t d_G( x.size(), zero_matrix<real_scalar_t>( x.size(),x.size() ) );
+        d_G[0](0,0) = 0.;
+        return d_G;
+    }
+private:
+    real_scalar_t m_mu_fid;
+    real_scalar_t m_C_fid;
+    real_scalar_t m_N_fid;
+    std::size_t m_num_data_points;
+    real_vector_t m_data_x;
+};
+
+template<typename real_scalar_t>
+void test_two_normal_distributions_mu_only(std::string const & chn_file_name){
+    using namespace boost::numeric::ublas;
+    using namespace mpp::hamiltonian;
+    using namespace mpp::chains;
+
+    typedef vector<real_scalar_t> real_vector_t;
+    typedef two_normal_distributions_mu_only<real_scalar_t> norm_dist_t;
+    typedef rm_hmc_sampler<real_scalar_t> rm_hmc_sampler_t;
+    typedef typename rm_hmc_sampler_t::log_post_func_t log_post_func_t;
+    typedef typename rm_hmc_sampler_t::grad_log_post_func_t grad_log_post_func_t;
+    typedef typename rm_hmc_sampler_t::mtr_tnsr_log_post_func_t mtr_tnsr_log_post_func_t;
+    typedef typename rm_hmc_sampler_t::der_mtr_tnsr_log_post_func_t der_mtr_tnsr_log_post_func_t;
+    typedef std::mt19937 rng_t;
+    typedef mcmc_chain<real_scalar_t> chain_t;
+
+    real_scalar_t const mu_fid = 0.;
+    real_scalar_t const C_fid = 100.;
+    real_scalar_t const N_fid = 100.;
+    std::size_t  const num_data_points = 100;
+    std::size_t  const random_seed = 1234;
+    norm_dist_t nrm_dst(mu_fid, C_fid, N_fid, num_data_points, random_seed);
+
+    using std::placeholders::_1;
+    log_post_func_t log_posterior = std::bind (&norm_dist_t::log_posterior, &nrm_dst, _1);
+    grad_log_post_func_t grad_log_posterior = std::bind (&norm_dist_t::grad_log_posterior, &nrm_dst, _1);
+    mtr_tnsr_log_post_func_t metric_tensor_log_posterior = std::bind (
+            &norm_dist_t::metric_tensor_log_posterior,
+            &nrm_dst,
+            _1
+    );
+    der_mtr_tnsr_log_post_func_t deriv_metric_tensor_log_posterior = std::bind(
+            &norm_dist_t::deriv_metric_tensor_log_posterior,
+            &nrm_dst,
+            _1
+    );
+
+    std::size_t const num_leap_frog_steps = 5;
+    std::size_t const num_fixed_point_steps = 5;
+    real_scalar_t const step_size = 0.75;
+    std::size_t const num_dims = 1;
+    rm_hmc_sampler_t rm_hmc_spr(
+            log_posterior,
+            grad_log_posterior,
+            metric_tensor_log_posterior,
+            deriv_metric_tensor_log_posterior,
+            num_dims,
+            step_size,
+            num_leap_frog_steps,
+            num_fixed_point_steps
+    );
+
+    size_t const num_samples(10000);
+    real_vector_t x_0(num_dims);
+    x_0(0) = 0.1;
+    rng_t rng;
+    chain_t chn = rm_hmc_spr.run_sampler(num_samples,x_0,rng);
+    chn.write_samples_to_csv(chn_file_name);
+    std::cout << "acc rate = " << rm_hmc_spr.acc_rate() << std::endl;
+
+}
+
 BOOST_AUTO_TEST_CASE(normal_distribution_rmhmc) {
     // test_normal_distribution_rmhmc<float>(std::string("rmhmc_nrm_dist.float.chain"));
     // test_normal_distribution_C_form_rmhmc<float>(std::string("c_form_rmhmc_nrm_dist.float.chain"));
-    test_normal_distribution_C_and_N<float>(std::string("c_and_n_rmhmc_nrm_dist.float.chain"));
+    // test_normal_distribution_C_and_N<float>(std::string("c_and_n_rmhmc_nrm_dist.float.chain"));
+    test_two_normal_distributions_mu_only<float>(std::string("c_and_n_rmhmc_nrm_dist.float.chain"));
 }
