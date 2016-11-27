@@ -244,7 +244,7 @@ void test_rmhmc_banana(std::string const & chn_file_name)
         num_fixed_point_steps
     );
 
-    size_t const num_samples(1000);
+    size_t const num_samples(10000);
     real_vector_t x_0(num_dims);
     rng_t rng;
     normal_distribution_t norm_dist(0,1);

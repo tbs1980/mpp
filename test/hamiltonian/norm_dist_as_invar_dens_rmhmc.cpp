@@ -635,7 +635,12 @@ public:
         real_scalar_t const mu = x(0);
         real_scalar_t const C = x(1);
         real_scalar_t log_lik(0);
-        BOOST_ASSERT(C>0);
+        if (C > 1e4){
+            return -std::numeric_limits<real_scalar_t>::max();
+        }
+        if ( C <=0 or C > 1e4){
+            return -std::numeric_limits<real_scalar_t>::max();
+        }
         for(std::size_t dim_i = 0; dim_i < m_data_x.size(); ++dim_i) {
             real_scalar_t const diff = m_data_x(dim_i) - mu;
             log_lik -= diff*diff;
@@ -704,7 +709,7 @@ void test_two_normal_distributions_mu_and_C(std::string const & chn_file_name){
 
     real_scalar_t const mu_fid = 0.;
     real_scalar_t const C_fid = 100.;
-    real_scalar_t const N_fid = 10.;
+    real_scalar_t const N_fid = 1000.;
     std::size_t  const num_data_points = 1000;
     std::size_t  const random_seed = 1234;
     norm_dist_t nrm_dst(mu_fid, C_fid, N_fid, num_data_points, random_seed);
@@ -738,10 +743,10 @@ void test_two_normal_distributions_mu_and_C(std::string const & chn_file_name){
             num_fixed_point_steps
     );
 
-    size_t const num_samples(1000);
+    size_t const num_samples(5000);
     real_vector_t x_0(num_dims);
     x_0(0) = 0.1;
-    x_0(1) = 1000.;
+    x_0(1) = 100.;
     rng_t rng;
     chain_t chn = rm_hmc_spr.run_sampler(num_samples,x_0,rng);
     chn.write_samples_to_csv(chn_file_name);
