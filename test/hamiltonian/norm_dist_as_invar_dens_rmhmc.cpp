@@ -754,6 +754,98 @@ void test_two_normal_distributions_mu_and_C(std::string const & chn_file_name){
 
 }
 
+
+template<typename  _real_scalar_t>
+class two_multi_normal_distributions_mu_and_C{
+public:
+    typedef _real_scalar_t real_scalar_t;
+    typedef boost::numeric::ublas::vector<real_scalar_t> real_vector_t;
+    typedef boost::numeric::ublas::matrix<real_scalar_t> real_matrix_t;
+    typedef boost::numeric::ublas::unbounded_array<real_matrix_t> real_matrix_array_t;
+    typedef std::mt19937 rng_t;
+    typedef std::normal_distribution<real_scalar_t> normal_distribution_t;
+
+    two_multi_normal_distributions_mu_and_C(real_vector_t const & mu_fid,
+                        real_matrix_t const & C_fid,
+                        real_matrix_t const & N_fid,
+                        std::size_t const num_data_points,
+                        std::size_t const random_seed
+    )
+    :m_mu_fid(mu_fid)
+    ,m_C_fid(C_fid)
+    ,m_N_fid(N_fid)
+    ,m_num_data_points(num_data_points) {
+        m_data_x = real_matrix_t(m_num_data_points, mu_fid.size());
+        rng_t rng(random_seed);
+        normal_distribution_t nrm_dist(m_mu_fid, std::sqrt(m_N_fid + m_C_fid));
+        for(std::size_t dim_i = 0; dim_i < m_data_x.size(); ++dim_i){
+            m_data_x(dim_i) = nrm_dist(rng);
+        }
+    }
+    ~two_multi_normal_distributions_mu_and_C(){
+
+    }
+
+    real_scalar_t log_posterior(real_vector_t const & x) const {
+        real_scalar_t const mu = x(0);
+        real_scalar_t const C = x(1);
+        real_scalar_t log_lik(0);
+        if (C > 1e4){
+            return -std::numeric_limits<real_scalar_t>::max();
+        }
+        if ( C <=0 or C > 1e4){
+            return -std::numeric_limits<real_scalar_t>::max();
+        }
+        for(std::size_t dim_i = 0; dim_i < m_data_x.size(); ++dim_i) {
+            real_scalar_t const diff = m_data_x(dim_i) - mu;
+            log_lik -= diff*diff;
+        }
+        log_lik *= 0.5/(m_N_fid);
+        log_lik -= 0.5*m_num_data_points*std::log(m_N_fid);
+        real_scalar_t log_prior = -0.5*std::log(C) -0.5*mu*mu/C;
+        return log_lik + log_prior;
+    }
+
+    real_vector_t grad_log_posterior(real_vector_t const & x) const {
+        real_scalar_t const mu = x(0);
+        real_scalar_t const C = x(1);
+        real_vector_t d_x(x.size());
+        real_scalar_t const d_mu = ( sum(m_data_x) - m_num_data_points*mu )/m_N_fid - mu/C;
+        real_scalar_t const d_C = -0.5/C + 0.5*mu*mu/C/C;
+        d_x(0) = d_mu;
+        d_x(1) = d_C;
+        return d_x;
+    }
+
+    real_matrix_t metric_tensor_log_posterior(real_vector_t const & x)const {
+        real_scalar_t const C = x(1);
+        real_matrix_t G(x.size(),x.size());
+        G(0,0) = m_num_data_points/m_N_fid + 1./C;
+        G(0,1) = 0.;
+        G(1,0) = 0.;
+        G(1,1) = 2./C;
+        return G;
+    }
+
+    real_matrix_array_t deriv_metric_tensor_log_posterior(real_vector_t const & x ) const {
+        using namespace boost::numeric::ublas;
+        real_scalar_t const C = x(1);
+        real_matrix_array_t d_G( x.size(), zero_matrix<real_scalar_t>( x.size(),x.size() ) );
+        d_G[1](0,0) = -1./C/C;
+        d_G[1](0,1) = 0.;
+        d_G[1](1,0) = 0.;
+        d_G[1](1,1) = -2./C/C;
+
+        return d_G;
+    }
+private:
+    real_vector_t m_mu_fid;
+    real_matrix_t m_C_fid;
+    real_matrix_t m_N_fid;
+    std::size_t m_num_data_points;
+    real_matrix_t m_data_x;
+};
+
 BOOST_AUTO_TEST_CASE(normal_distribution_rmhmc) {
     // test_normal_distribution_rmhmc<float>(std::string("rmhmc_nrm_dist.float.chain"));
     // test_normal_distribution_C_form_rmhmc<float>(std::string("c_form_rmhmc_nrm_dist.float.chain"));
