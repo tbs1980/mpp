@@ -36,4 +36,7 @@ add_compute_test(
         norm_dist_as_invar_dens_rmhmc.cpp
 )
 
-
+add_compute_test(
+        "hamiltonian.multi_var_norm_as_invar_dens_rmhmc"
+        multi_var_norm_as_invar_dens_rmhmc.cpp
+)
