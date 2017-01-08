@@ -244,8 +244,6 @@ public:
         bool has_inv = compute_inverse<real_scalar_t>(sigma, sigma_inv);
         BOOST_ASSERT(has_inv == true);
 
-        // real_matrix_t const sig_inv_outer_sig_inv
-        //     = outer_prod(sigma_inv, sigma_inv);
         real_matrix_t sig_inv_outer_sig_inv(
             sigma_inv.size1()*sigma_inv.size1(),
             sigma_inv.size2()*sigma_inv.size2()
@@ -313,7 +311,7 @@ void test_multivariate_normal(std::string const & chn_file_name) {
     std::size_t const num_dims = 2;
     real_vector_t const mu_fid = zero_vector<real_scalar_t>(num_dims);
     real_matrix_t const sigma_fid = identity_matrix<real_scalar_t>(num_dims);
-    std::size_t const num_data_points = 1000;
+    std::size_t const num_data_points = 1;
     std::size_t const random_seed = 31415;
     multivariate_normal_t mvnrm(mu_fid, sigma_fid, num_data_points, random_seed);
 
@@ -326,12 +324,14 @@ void test_multivariate_normal(std::string const & chn_file_name) {
     for(std::size_t dim_i = 0; dim_i < sigma_fid.size1(); ++dim_i) {
         for(std::size_t dim_j = dim_i; dim_j < sigma_fid.size2(); ++dim_j) {
             arg_x(ind_i) = sigma_fid(dim_i, dim_j);
+            ++ind_i;
         }
     }
 
     real_scalar_t const log_post_val = mvnrm.log_posterior(arg_x);
     real_vector_t const d_arg_x = mvnrm.grad_log_posterior(arg_x);
     real_matrix_t const mtrc_tnsr_G = mvnrm.metric_tensor_log_posterior(arg_x);
+
 }
 
 BOOST_AUTO_TEST_CASE(multivariate_normal_distribution_rmhmc) {
