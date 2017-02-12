@@ -293,6 +293,48 @@ public:
 
     }
 
+    real_matrix_t duplication_matrix(std::size_t const dim_n){
+        using namespace boost::numeric::ublas;
+        BOOST_ASSERT(dim_n > 0);
+
+        std::size_t const num_dup_mat_cols = dim_n*(dim_n+1)/2;
+        // std::size_t const uvh_size = (size_t) 0.5*(-1. + std::sqrt(1 + 8*num_dup_mat_cols));
+        std::size_t const uvh_size = dim_n;
+
+        real_matrix_t dup_mat(dim_n*dim_n, dim_n*(dim_n+1)/2);
+
+        real_matrix_t temp_mat = identity_matrix<real_scalar_t>(num_dup_mat_cols);
+        real_vector_t row_x(temp_mat.size1());
+        for(std::size_t dim_i = 0; dim_i < temp_mat.size1(); ++dim_i) {
+            for(std::size_t dim_j = 0; dim_j < temp_mat.size2(); ++dim_j) {
+                row_x(dim_j) = temp_mat(dim_i, dim_j);
+            }
+
+            real_matrix_t res_mat = zero_matrix<real_scalar_t>(uvh_size, uvh_size);
+            std::size_t index = 0;
+            for(size_t ind_i = 0; ind_i < res_mat.size1(); ++ind_i) {
+                for(std::size_t ind_j = ind_i ; ind_j < res_mat.size2(); ++ind_j) {
+                    res_mat(ind_i, ind_j) = row_x(index);
+                    ++index;
+                }
+            }
+            res_mat = res_mat + trans(res_mat);
+            for(size_t ind_i = 0; ind_i < res_mat.size1(); ++ind_i) {
+                res_mat(ind_i, ind_i) *= 0.5;
+            }
+
+            index = 0;
+            for(size_t ind_i = 0; ind_i < res_mat.size1(); ++ind_i) {
+                for(std::size_t ind_j = 0 ; ind_j < res_mat.size2(); ++ind_j) {
+                    dup_mat(index ,dim_i) = res_mat(ind_i, ind_j);
+                    ++index;
+                }
+            }
+        }
+
+        return dup_mat;
+    }
+
 private:
     real_vector_t m_mu_fid;
     real_matrix_t m_sigma_fid;
@@ -332,6 +374,8 @@ void test_multivariate_normal(std::string const & chn_file_name) {
     real_vector_t const d_arg_x = mvnrm.grad_log_posterior(arg_x);
     real_matrix_t const mtrc_tnsr_G = mvnrm.metric_tensor_log_posterior(arg_x);
 
+    real_matrix_t dup_mat = mvnrm.duplication_matrix(3);
+    std::cout << dup_mat << std::endl;
 }
 
 BOOST_AUTO_TEST_CASE(multivariate_normal_distribution_rmhmc) {
