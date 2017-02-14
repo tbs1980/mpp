@@ -335,6 +335,40 @@ public:
         return dup_mat;
     }
 
+    real_matrix_t commutation_matrix(std::size_t const dim_p, std::size_t const dim_q) {
+        using namespace boost::numeric::ublas;
+        BOOST_ASSERT(dim_p > 0);
+        BOOST_ASSERT(dim_q > 0);
+        real_matrix_t comm_mat(dim_p*dim_q, dim_p*dim_q);
+
+        real_matrix_t mat_k = identity_matrix<real_scalar_t>(dim_p*dim_q);
+        real_matrix_t ind_mat(dim_p, dim_q);
+        std::size_t index = 0;
+        for(std::size_t dim_j =0; dim_j < ind_mat.size2(); ++dim_j) {
+            for(std::size_t dim_i = 0; dim_i < ind_mat.size1(); ++dim_i) {
+                ind_mat(dim_i, dim_j) = (real_scalar_t) index;
+                ++index;
+            }
+        }
+
+        real_vector_t indices( ind_mat.size1()*ind_mat.size2() );
+        index = 0;
+        for(std::size_t dim_i = 0; dim_i < ind_mat.size1(); ++dim_i) {
+            for(std::size_t dim_j =0; dim_j < ind_mat.size2(); ++dim_j) {
+                indices(index) = ind_mat(dim_i, dim_j);
+                ++index;
+            }
+        }
+
+        for(std::size_t dim_i = 0; dim_i < mat_k.size1(); ++dim_i) {
+            for(std::size_t dim_j =0; dim_j < mat_k.size2(); ++dim_j) {
+                comm_mat(dim_i, dim_j) = mat_k((std::size_t)indices(dim_i) , dim_j);
+            }
+        }
+
+        return comm_mat;
+    }
+
 private:
     real_vector_t m_mu_fid;
     real_matrix_t m_sigma_fid;
@@ -376,6 +410,9 @@ void test_multivariate_normal(std::string const & chn_file_name) {
 
     real_matrix_t dup_mat = mvnrm.duplication_matrix(3);
     std::cout << dup_mat << std::endl;
+
+    real_matrix_t comm_mat = mvnrm.commutation_matrix(3,2);
+    std::cout << "\n" << comm_mat << std::endl;
 }
 
 BOOST_AUTO_TEST_CASE(multivariate_normal_distribution_rmhmc) {
