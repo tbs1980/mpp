@@ -293,6 +293,53 @@ public:
 
     }
 
+    real_matrix_array_t deriv_metric_tensor_log_posterior(real_vector_t const & arg_x ) const {
+        using namespace boost::numeric::ublas;
+        using namespace mpp::utils;
+
+        BOOST_ASSERT( arg_x.size() == m_mu_fid.size() + m_sigma_fid.size1()*(m_sigma_fid.size1()+1)/2 );
+
+        real_matrix_array_t der_mtrc_tnsr_G( arg_x.size(), zero_matrix<real_scalar_t>( arg_x.size(), arg_x.size() ) );
+
+        real_vector_t mu(m_mu_fid.size());
+        std::size_t ind_i = 0;
+        for(std::size_t dim_i = 0; dim_i < mu.size(); ++dim_i) {
+            mu(dim_i) = arg_x(ind_i);
+            ++ind_i;
+        }
+        real_matrix_t sigma(m_sigma_fid.size1(), m_sigma_fid.size2());
+        for(std::size_t dim_i = 0; dim_i < m_sigma_fid.size1(); ++ dim_i) {
+            for(std::size_t dim_j = dim_i; dim_j < m_sigma_fid.size2(); ++dim_j) {
+                sigma(dim_i, dim_j) = arg_x(ind_i);
+                sigma(dim_j, dim_i) = arg_x(ind_i);
+                ++ind_i;
+            }
+        }
+
+        real_matrix_t sigma_inv(sigma.size1(), sigma.size2());
+        bool has_inv = compute_inverse<real_scalar_t>(sigma, sigma_inv);
+        BOOST_ASSERT(has_inv == true);
+
+        real_matrix_t sig_inv_outer_sig_inv(
+            sigma_inv.size1()*sigma_inv.size1(),
+            sigma_inv.size2()*sigma_inv.size2()
+        );
+        for(std::size_t dim_i = 0; dim_i < sigma_inv.size1(); ++dim_i) {
+            for(std::size_t dim_j = 0; dim_j < sigma_inv.size2(); ++dim_j) {
+                for(std::size_t ind_i = 0; ind_i < sigma_inv.size1(); ++ind_i) {
+                    for(std::size_t ind_j = 0; ind_j < sigma_inv.size2(); ++ind_j) {
+                        sig_inv_outer_sig_inv(
+                            dim_i*sigma_inv.size1()+ind_i,
+                            dim_j*sigma_inv.size2()+ind_j
+                        ) = sigma_inv(dim_i, dim_j)*sigma_inv(ind_i, ind_j);
+                    }
+                }
+            }
+        }
+
+        return der_mtrc_tnsr_G;
+    }
+
     real_matrix_t duplication_matrix(std::size_t const dim_n){
         using namespace boost::numeric::ublas;
         BOOST_ASSERT(dim_n > 0);
@@ -383,6 +430,7 @@ void test_multivariate_normal(std::string const & chn_file_name) {
     typedef vector<real_scalar_t> real_vector_t;
     typedef matrix<real_scalar_t> real_matrix_t;
     typedef multivariate_normal<real_scalar_t> multivariate_normal_t;
+    typedef boost::numeric::ublas::unbounded_array<real_matrix_t> real_matrix_array_t;
 
     std::size_t const num_dims = 2;
     real_vector_t const mu_fid = zero_vector<real_scalar_t>(num_dims);
@@ -413,6 +461,8 @@ void test_multivariate_normal(std::string const & chn_file_name) {
 
     real_matrix_t comm_mat = mvnrm.commutation_matrix(3,2);
     std::cout << "\n" << comm_mat << std::endl;
+
+    real_matrix_array_t der_mtrc_tnsr_G = mvnrm.deriv_metric_tensor_log_posterior(arg_x);
 }
 
 BOOST_AUTO_TEST_CASE(multivariate_normal_distribution_rmhmc) {
