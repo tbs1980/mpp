@@ -60,6 +60,10 @@ public:
                 m_data_x(dim_i, dim_j) = data_row(dim_j);
             }
         }
+
+        m_dup_mat_n = duplication_matrix(m_mu_fid.size());
+        m_dup_mat_nn = duplication_matrix(m_mu_fid.size()*m_mu_fid.size());
+        m_comm_mat_nn = commutation_matrix(m_mu_fid.size()*m_mu_fid.size(), m_mu_fid.size()*m_mu_fid.size());
     }
 
     ~multivariate_normal(){
@@ -421,6 +425,9 @@ private:
     real_matrix_t m_sigma_fid;
     std::size_t m_num_data_points;
     real_matrix_t m_data_x;
+    real_matrix_t m_dup_mat_n;
+    real_matrix_t m_dup_mat_nn;
+    real_matrix_t m_comm_mat_nn;
 };
 
 template<typename real_scalar_t>
