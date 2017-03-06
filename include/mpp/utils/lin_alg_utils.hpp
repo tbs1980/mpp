@@ -20,8 +20,8 @@ real_scalar_t compute_trace(
     using namespace boost::numeric::ublas;
     typedef matrix<real_scalar_t> real_matrix_t;
     matrix_vector_range<real_matrix_t> diag (
-        m, 
-        range(0,m.size1()), 
+        m,
+        range(0,m.size1()),
         range(0,m.size2())
     );
     return sum(diag);
@@ -108,6 +108,49 @@ bool compute_inverse(
     return true;
 }
 
+
+// http://glucat.cvs.sourceforge.net/glucat/glucat/glucat/matrix_imp.h?revision=1.14&view=markup
+template< typename LHS_T, typename RHS_T >
+const
+RHS_T
+kron(const LHS_T& lhs, const RHS_T& rhs)
+{
+    typedef RHS_T matrix_t;
+    typedef typename matrix_t::size_type matrix_index_t;
+    const matrix_index_t rhs_s1 = rhs.size1();
+    const matrix_index_t rhs_s2 = rhs.size2();
+    matrix_t result(lhs.size1()*rhs_s1, lhs.size2()*rhs_s2);
+    result.clear();
+
+    typedef typename matrix_t::value_type Scalar_T;
+    typedef typename LHS_T::const_iterator1 lhs_const_iterator1;
+    typedef typename LHS_T::const_iterator2 lhs_const_iterator2;
+    typedef typename RHS_T::const_iterator1 rhs_const_iterator1;
+    typedef typename RHS_T::const_iterator2 rhs_const_iterator2;
+    for (lhs_const_iterator1
+      lhs_it1 = lhs.begin1();
+      lhs_it1 != lhs.end1();
+      ++lhs_it1)
+    for (lhs_const_iterator2
+        lhs_it2 = lhs_it1.begin();
+        lhs_it2 != lhs_it1.end();
+        ++lhs_it2)
+    {
+      const matrix_index_t start1 = rhs_s1 * lhs_it2.index1();
+      const matrix_index_t start2 = rhs_s2 * lhs_it2.index2();
+      const Scalar_T& lhs_val = *lhs_it2;
+      for (rhs_const_iterator1
+          rhs_it1 = rhs.begin1();
+          rhs_it1 != rhs.end1();
+          ++rhs_it1)
+        for (rhs_const_iterator2
+            rhs_it2 = rhs_it1.begin();
+            rhs_it2 != rhs_it1.end();
+            ++rhs_it2)
+          result(start1 + rhs_it2.index1(), start2 + rhs_it2.index2()) = lhs_val * *rhs_it2;
+    }
+    return result;
+}
 
 }}
 

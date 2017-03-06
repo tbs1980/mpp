@@ -465,6 +465,33 @@ void test_multivariate_normal(std::string const & chn_file_name) {
     real_matrix_array_t der_mtrc_tnsr_G = mvnrm.deriv_metric_tensor_log_posterior(arg_x);
 }
 
+template<typename real_scalar_t>
+void test_kron_prod() {
+    using namespace boost::numeric::ublas;
+    using namespace mpp::utils;
+    typedef matrix<real_scalar_t> real_matrix_t;
+
+    real_matrix_t mat_A(2,2);
+    real_matrix_t mat_B(2,2);
+
+    std::size_t ind = 0;
+    for(std::size_t i=0; i < 2; ++i){
+        for(std::size_t j=0; j < 2; ++j){
+            mat_A(i,j) = (real_scalar_t) ind;
+            mat_B(i,j) = (real_scalar_t) 1.;
+            ++ind;
+        }
+    }
+
+    std::cout << mat_A << std::endl;
+    std::cout << mat_B << std::endl;
+
+    real_matrix_t mat_C = kron(mat_A, mat_B);
+
+    std::cout << mat_C << std::endl;
+}
+
 BOOST_AUTO_TEST_CASE(multivariate_normal_distribution_rmhmc) {
-    test_multivariate_normal<float>(std::string("multivar_nrm_dist_rmhmc.float.chain"));
+    // test_multivariate_normal<float>(std::string("multivar_nrm_dist_rmhmc.float.chain"));
+    test_kron_prod<double>();
 }
