@@ -35,6 +35,7 @@ public:
     , m_sigma_fid(sigma_fid)
     , m_num_data_points(num_data_points) {
         using namespace mpp::utils;
+        using namespace boost::numeric::ublas;
 
         BOOST_ASSERT(m_mu_fid.size() == 2);
         BOOST_ASSERT(m_mu_fid.size() == m_sigma_fid.size1());
@@ -64,6 +65,11 @@ public:
         m_dup_mat_m = duplication_matrix(m_mu_fid.size());
         m_dup_mat_mm = duplication_matrix(m_mu_fid.size()*m_mu_fid.size());
         m_comm_mat_mm = commutation_matrix(m_mu_fid.size()*m_mu_fid.size(), m_mu_fid.size()*m_mu_fid.size());
+        m_dm_T_kron_dm_T = kron(trans(m_dup_mat_m), trans(m_dup_mat_m));
+        m_mat_I_m = identity_matrix<real_scalar_t>(m_mu_fid.size());
+        m_mat_I_m2 = identity_matrix<real_scalar_t>(m_mu_fid.size()*m_mu_fid.size());
+        m_mat_P = kron(m_mat_I_m, kron(m_comm_mat_mm, m_mat_I_m) );
+
     }
 
     ~multivariate_normal(){
@@ -276,19 +282,19 @@ public:
     }
 
     real_matrix_array_t deriv_metric_tensor_log_posterior(real_vector_t const & arg_x ) const {
+        // TODO we need refer to the equations in the paper
         using namespace boost::numeric::ublas;
         using namespace mpp::utils;
 
         BOOST_ASSERT( arg_x.size() == m_mu_fid.size() + m_sigma_fid.size1()*(m_sigma_fid.size1()+1)/2 );
 
-        real_matrix_array_t der_mtrc_tnsr_G( arg_x.size(), zero_matrix<real_scalar_t>( arg_x.size(), arg_x.size() ) );
-
+        // convert the argument to mu and sigma
         real_vector_t mu(m_mu_fid.size());
         std::size_t index_i = 0;
         for(std::size_t dim_i = 0; dim_i < mu.size(); ++dim_i) {
             mu(dim_i) = arg_x(index_i);
             ++index_i;
-        }
+        } // TODO we need to copy this in a better way
         real_matrix_t sigma(m_sigma_fid.size1(), m_sigma_fid.size2());
         for(std::size_t dim_i = 0; dim_i < m_sigma_fid.size1(); ++ dim_i) {
             for(std::size_t dim_j = dim_i; dim_j < m_sigma_fid.size2(); ++dim_j) {
@@ -296,28 +302,19 @@ public:
                 sigma(dim_j, dim_i) = arg_x(index_i);
                 ++index_i;
             }
-        }
+        } // TODO we need to copy this in a better way
 
+        // compute the ivnerse of Sigma
         real_matrix_t sigma_inv(sigma.size1(), sigma.size2());
         bool has_inv = compute_inverse<real_scalar_t>(sigma, sigma_inv);
         BOOST_ASSERT(has_inv == true);
 
-        real_matrix_t sig_inv_outer_sig_inv(
-            sigma_inv.size1()*sigma_inv.size1(),
-            sigma_inv.size2()*sigma_inv.size2()
-        );
-        for(std::size_t dim_i = 0; dim_i < sigma_inv.size1(); ++dim_i) {
-            for(std::size_t dim_j = 0; dim_j < sigma_inv.size2(); ++dim_j) {
-                for(std::size_t ind_i = 0; ind_i < sigma_inv.size1(); ++ind_i) {
-                    for(std::size_t ind_j = 0; ind_j < sigma_inv.size2(); ++ind_j) {
-                        sig_inv_outer_sig_inv(
-                            dim_i*sigma_inv.size1()+ind_i,
-                            dim_j*sigma_inv.size2()+ind_j
-                        ) = sigma_inv(dim_i, dim_j)*sigma_inv(ind_i, ind_j);
-                    }
-                }
-            }
-        }
+        // compute Sigma^-1 kron Sigma^-1
+        real_matrix_t const sig_inv_kron_sig_inv = kron(sigma_inv, sigma_inv);
+
+        real_matrix_t const phi = -real_scalar_t(m_num_data_points)*prod(sig_inv_kron_sig_inv, m_dup_mat_m);
+
+        real_matrix_array_t der_mtrc_tnsr_G( arg_x.size(), zero_matrix<real_scalar_t>( arg_x.size(), arg_x.size() ) );
 
         return der_mtrc_tnsr_G;
     }
@@ -406,6 +403,10 @@ private:
     real_matrix_t m_dup_mat_m;
     real_matrix_t m_dup_mat_mm;
     real_matrix_t m_comm_mat_mm;
+    real_matrix_t m_dm_T_kron_dm_T;
+    real_matrix_t m_mat_P;
+    real_matrix_t m_mat_I_m;
+    real_matrix_t m_mat_I_m2;
 };
 
 template<typename real_scalar_t>
