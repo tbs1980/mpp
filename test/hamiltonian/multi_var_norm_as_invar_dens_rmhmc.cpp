@@ -216,20 +216,19 @@ public:
     }
 
     real_matrix_t metric_tensor_log_posterior(real_vector_t const & arg_x) const {
+        // TODO we need refer to the equations in the paper
         using namespace boost::numeric::ublas;
         using namespace mpp::utils;
 
         BOOST_ASSERT( arg_x.size() == m_mu_fid.size() + m_sigma_fid.size1()*(m_sigma_fid.size1()+1)/2 );
 
-        real_matrix_t mtrc_tnsr_G
-            = zero_matrix<real_scalar_t>(arg_x.size(), arg_x.size());
-
+        // convert the argument to mu and sigma
         real_vector_t mu(m_mu_fid.size());
         std::size_t index_i = 0;
         for(std::size_t dim_i = 0; dim_i < mu.size(); ++dim_i) {
             mu(dim_i) = arg_x(index_i);
             ++index_i;
-        }
+        } // TODO we need to copy this in a better way
         real_matrix_t sigma(m_sigma_fid.size1(), m_sigma_fid.size2());
         for(std::size_t dim_i = 0; dim_i < m_sigma_fid.size1(); ++ dim_i) {
             for(std::size_t dim_j = dim_i; dim_j < m_sigma_fid.size2(); ++dim_j) {
@@ -237,38 +236,20 @@ public:
                 sigma(dim_j, dim_i) = arg_x(index_i);
                 ++index_i;
             }
-        }
+        } // TODO we need to copy this in a better way
 
+        // compute the ivnerse of Sigma
         real_matrix_t sigma_inv(sigma.size1(), sigma.size2());
-        bool has_inv = compute_inverse<real_scalar_t>(sigma, sigma_inv);
+        bool const has_inv = compute_inverse<real_scalar_t>(sigma, sigma_inv);
         BOOST_ASSERT(has_inv == true);
 
-        real_matrix_t sig_inv_outer_sig_inv(
-            sigma_inv.size1()*sigma_inv.size1(),
-            sigma_inv.size2()*sigma_inv.size2()
-        );
-        for(std::size_t dim_i = 0; dim_i < sigma_inv.size1(); ++dim_i) {
-            for(std::size_t dim_j = 0; dim_j < sigma_inv.size2(); ++dim_j) {
-                for(std::size_t ind_i = 0; ind_i < sigma_inv.size1(); ++ind_i) {
-                    for(std::size_t ind_j = 0; ind_j < sigma_inv.size2(); ++ind_j) {
-                        sig_inv_outer_sig_inv(
-                            dim_i*sigma_inv.size1()+ind_i,
-                            dim_j*sigma_inv.size2()+ind_j
-                        ) = sigma_inv(dim_i, dim_j)*sigma_inv(ind_i, ind_j);
-                    }
-                }
-            }
-        }
+        // compute Sigma^-1 kron Sigma^-1
+        real_matrix_t const sig_inv_kron_sig_inv = kron(sigma_inv, sigma_inv);
 
-        real_matrix_t dup_mat = zero_matrix<real_scalar_t>(
-            sigma.size1()*sigma.size2(),
-            sigma.size1()+(sigma.size1()+1)/2
-        );
-        dup_mat(0, 0) = 1.;
-        dup_mat(1, 1) = 1.;
-        dup_mat(2, 1) = 1.;
-        dup_mat(3, 2) = 1.;
+        real_matrix_t mtrc_tnsr_G
+            = zero_matrix<real_scalar_t>(arg_x.size(), arg_x.size());
 
+        // create the top-left block of G
         for(std::size_t dim_i = 0; dim_i < sigma_inv.size1(); ++dim_i) {
             for(std::size_t dim_j = 0; dim_j < sigma_inv.size2(); ++dim_j) {
                 mtrc_tnsr_G(dim_i, dim_j)
@@ -276,16 +257,17 @@ public:
             }
         }
 
-        real_matrix_t dm_t_outer_sig_inv_dm
-            = prod(trans(dup_mat), real_matrix_t( prod(sig_inv_outer_sig_inv, dup_mat)));
+        real_matrix_t dm_t_sig_inv_kron_sig_inv_dm
+            = prod(trans(m_dup_mat_m), real_matrix_t( prod(sig_inv_kron_sig_inv, m_dup_mat_m)));
 
-        BOOST_ASSERT(dm_t_outer_sig_inv_dm.size1() == dm_t_outer_sig_inv_dm.size2());
+        BOOST_ASSERT(dm_t_sig_inv_kron_sig_inv_dm.size1() == dm_t_sig_inv_kron_sig_inv_dm.size2());
 
-        for(std::size_t dim_i = 0; dim_i < dm_t_outer_sig_inv_dm.size1(); ++dim_i) {
-            for(std::size_t dim_j = 0; dim_j < dm_t_outer_sig_inv_dm.size2(); ++dim_j) {
+        // create the bottom-left block of G
+        for(std::size_t dim_i = 0; dim_i < dm_t_sig_inv_kron_sig_inv_dm.size1(); ++dim_i) {
+            for(std::size_t dim_j = 0; dim_j < dm_t_sig_inv_kron_sig_inv_dm.size2(); ++dim_j) {
                 mtrc_tnsr_G(dim_i+sigma_inv.size1(), dim_j+sigma_inv.size2())
-                    = m_num_data_points
-                        *real_scalar_t(0.5)*dm_t_outer_sig_inv_dm(dim_i, dim_j);
+                    = m_num_data_points*real_scalar_t(0.5)
+                        *dm_t_sig_inv_kron_sig_inv_dm(dim_i, dim_j);
             }
         }
 
