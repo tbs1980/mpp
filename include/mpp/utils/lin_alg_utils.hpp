@@ -35,7 +35,7 @@ real_scalar_type compute_determinant(
     using namespace boost::numeric::ublas;
     BOOST_ASSERT( m.size1() == m.size2() );
     permutation_matrix<std::size_t> pivots( m.size1() );
-    int const is_singular = lu_factorize(m, pivots);
+    std::size_t const is_singular = lu_factorize(m, pivots);
     if (is_singular){
         return real_scalar_type(0);
     }
@@ -99,7 +99,7 @@ bool compute_inverse(
     using namespace boost::numeric::ublas;
     matrix<real_scalar_t> A(input);
     permutation_matrix<std::size_t> pm(A.size1());
-    int const res = lu_factorize(A,pm);
+    std::size_t const res = lu_factorize(A,pm);
     if( res != 0 ) {
         return false;
     }
