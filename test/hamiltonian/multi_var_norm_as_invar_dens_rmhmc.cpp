@@ -61,9 +61,9 @@ public:
             }
         }
 
-        m_dup_mat_n = duplication_matrix(m_mu_fid.size());
-        m_dup_mat_nn = duplication_matrix(m_mu_fid.size()*m_mu_fid.size());
-        m_comm_mat_nn = commutation_matrix(m_mu_fid.size()*m_mu_fid.size(), m_mu_fid.size()*m_mu_fid.size());
+        m_dup_mat_m = duplication_matrix(m_mu_fid.size());
+        m_dup_mat_mm = duplication_matrix(m_mu_fid.size()*m_mu_fid.size());
+        m_comm_mat_mm = commutation_matrix(m_mu_fid.size()*m_mu_fid.size(), m_mu_fid.size()*m_mu_fid.size());
     }
 
     ~multivariate_normal(){
@@ -71,6 +71,7 @@ public:
     }
 
     real_scalar_t log_posterior(real_vector_t const & arg_x) const {
+        // TODO we need refer to the equations in the paper
         using namespace boost::numeric::ublas;
         using namespace mpp::utils;
 
@@ -82,7 +83,7 @@ public:
         for(std::size_t dim_i = 0; dim_i < mu.size(); ++dim_i) {
             mu(dim_i) = arg_x(ind_i);
             ++ind_i;
-        }
+        }//TODO we need to copy this in a better way
         real_matrix_t sigma(m_sigma_fid.size1(), m_sigma_fid.size2());
         for(std::size_t dim_i = 0; dim_i < m_sigma_fid.size1(); ++ dim_i) {
             for(std::size_t dim_j = dim_i; dim_j < m_sigma_fid.size2(); ++dim_j) {
@@ -90,7 +91,7 @@ public:
                 sigma(dim_j, dim_i) = arg_x(ind_i);
                 ++ind_i;
             }
-        }
+        }//TODO we need to copy this in a better way
 
         // compute the determinant of sigma and check for positive definiteness
         real_scalar_t const det_sigma
@@ -127,40 +128,45 @@ public:
     }
 
     real_vector_t grad_log_posterior(real_vector_t const & arg_x) const {
+        // TODO we need refer to the equations in the paper
         using namespace boost::numeric::ublas;
         using namespace mpp::utils;
 
         BOOST_ASSERT( arg_x.size() == m_mu_fid.size() + m_sigma_fid.size1()*(m_sigma_fid.size1()+1)/2 );
 
+        // convert the argument to mu and sigma
         real_vector_t mu(m_mu_fid.size());
-        std::size_t ind_i = 0;
+        std::size_t ind_ms_i = 0;
         for(std::size_t dim_i = 0; dim_i < mu.size(); ++dim_i) {
-            mu(dim_i) = arg_x(ind_i);
-            ++ind_i;
-        }
+            mu(dim_i) = arg_x(ind_ms_i);
+            ++ind_ms_i;
+        } // TODO we need to copy this in a better way
         real_matrix_t sigma(m_sigma_fid.size1(), m_sigma_fid.size2());
         for(std::size_t dim_i = 0; dim_i < m_sigma_fid.size1(); ++ dim_i) {
             for(std::size_t dim_j = dim_i; dim_j < m_sigma_fid.size2(); ++dim_j) {
-                sigma(dim_i, dim_j) = arg_x(ind_i);
-                sigma(dim_j, dim_i) = arg_x(ind_i);
-                ++ind_i;
+                sigma(dim_i, dim_j) = arg_x(ind_ms_i);
+                sigma(dim_j, dim_i) = arg_x(ind_ms_i);
+                ++ind_ms_i;
             }
-        }
+        } // TODO we need to copy this in a better way
 
+        // find the inverse of sigma
         real_matrix_t sigma_inv(sigma.size1(), sigma.size2());
         bool has_inv = compute_inverse<real_scalar_t>(sigma, sigma_inv);
         BOOST_ASSERT(has_inv == true);
 
-        real_matrix_t mat_z
+        // compute the matrix S
+        real_matrix_t mat_s
             = zero_matrix<real_scalar_t>(mu.size(), mu.size());
         for(std::size_t dim_i = 0; dim_i < m_num_data_points; ++ dim_i) {
             real_vector_t diff_x_mu(mu.size());
             for(std::size_t dim_j = 0; dim_j < mu.size(); ++dim_j){
                 diff_x_mu(dim_j) = m_data_x(dim_i, dim_j) - mu(dim_j);
             }
-            mat_z += outer_prod(diff_x_mu, diff_x_mu);
+            mat_s += outer_prod(diff_x_mu, diff_x_mu);
         }
 
+        // compute the vector y_bar
         real_vector_t y_bar = zero_vector<real_scalar_t>(mu.size());
         for(std::size_t dim_i = 0; dim_i < m_num_data_points; ++ dim_i) {
             real_vector_t data_row(mu.size());
@@ -171,60 +177,41 @@ public:
         }
         y_bar /= static_cast<real_scalar_t>(m_num_data_points);
 
+        // compute the gradient of the log-posterior wrt mu d L/ d mu^T
         real_vector_t const d_mu = prod(sigma_inv, (y_bar - mu));
 
-        real_matrix_t const diff_z_n_sigma = mat_z - m_num_data_points*sigma;
-        real_vector_t vec_diff_z_n_sigma(sigma.size1()*sigma.size1());
-        ind_i = 0;
+        // compute vec(S - n*Sigma)
+        real_matrix_t const diff_s_n_sigma = mat_s - m_num_data_points*sigma;
+        real_vector_t vec_diff_s_n_sigma(sigma.size1()*sigma.size1());
+        std::size_t ind_vs_i = 0;
         for(std::size_t dim_i = 0; dim_i < sigma.size1(); ++dim_i) {
             for(std::size_t dim_j = 0; dim_j < sigma.size2(); ++dim_j) {
-                vec_diff_z_n_sigma(ind_i) = diff_z_n_sigma(dim_i, dim_j);
+                vec_diff_s_n_sigma(ind_vs_i) = diff_s_n_sigma(dim_i, dim_j);
+                ++ind_vs_i;
             }
-        }
-        // real_matrix_t const sig_inv_outer_sig_inv
-        //     = outer_prod(sigma_inv, sigma_inv);
-        // real_matrix_t sig_inv_outer_sig_inv(
-        //     sigma_inv.size1()*sigma_inv.size1(),
-        //     sigma_inv.size2()*sigma_inv.size2()
-        // );
-        // for(std::size_t dim_i = 0; dim_i < sigma_inv.size1(); ++dim_i) {
-        //     for(std::size_t dim_j = 0; dim_j < sigma_inv.size2(); ++dim_j) {
-        //         for(std::size_t ind_i = 0; ind_i < sigma_inv.size1(); ++ind_i) {
-        //             for(std::size_t ind_j = 0; ind_j < sigma_inv.size2(); ++ind_j) {
-        //                 sig_inv_outer_sig_inv(
-        //                     dim_i*sigma_inv.size1()+ind_i,
-        //                     dim_j*sigma_inv.size2()+ind_j
-        //                 ) = sigma_inv(dim_i, dim_j)*sigma_inv(ind_i, ind_j);
-        //             }
-        //         }
-        //     }
-        // }
-        real_matrix_t const sig_inv_outer_sig_inv = kron(sigma_inv, sigma_inv);
+        } // TODO we need to copy this in a better way
 
-        // real_matrix_t dup_mat = zero_matrix<real_scalar_t>(
-        //     sigma.size1()*sigma.size2(),
-        //     sigma.size1()+(sigma.size1()+1)/2
-        // );
-        // dup_mat(0, 0) = 1.;
-        // dup_mat(1, 1) = 1.;
-        // dup_mat(2, 1) = 1.;
-        // dup_mat(3, 2) = 1.;
-        real_matrix_t const dup_mat = duplication_matrix(sigma.size1());
+        // compute Sigma^-1 kron Sigma^-1
+        real_matrix_t const sig_inv_kron_sig_inv = kron(sigma_inv, sigma_inv);
 
+        // copute the gradient wrt to vech(Sigma) ie d L / d vech(Sigma)^T
         real_vector_t const d_vech_sigma = prod(
-            trans(dup_mat),
-            prod<real_vector_t>(sig_inv_outer_sig_inv, vec_diff_z_n_sigma)
+            trans(m_dup_mat_m),
+            prod<real_vector_t>(sig_inv_kron_sig_inv, vec_diff_s_n_sigma)
         );
 
+        // copy back to return gradeint vector
         real_vector_t d_arg_x(arg_x.size());
+        std::size_t ind_dx_i = 0;
         for(std::size_t dim_i = 0; dim_i < d_mu.size(); ++dim_i) {
-            d_arg_x(ind_i) = d_mu(dim_i);
-            ++ind_i;
+            d_arg_x(ind_dx_i) = d_mu(dim_i);
+            ++ind_dx_i;
         }
         for(std::size_t dim_i = 0; dim_i < d_vech_sigma.size(); ++dim_i) {
-            d_arg_x(ind_i) = d_vech_sigma(dim_i);
-            ++ind_i;
+            d_arg_x(ind_dx_i) = d_vech_sigma(dim_i);
+            ++ind_dx_i;
         }
+
         return d_arg_x;
     }
 
@@ -434,9 +421,9 @@ private:
     real_matrix_t m_sigma_fid;
     std::size_t m_num_data_points;
     real_matrix_t m_data_x;
-    real_matrix_t m_dup_mat_n;
-    real_matrix_t m_dup_mat_nn;
-    real_matrix_t m_comm_mat_nn;
+    real_matrix_t m_dup_mat_m;
+    real_matrix_t m_dup_mat_mm;
+    real_matrix_t m_comm_mat_mm;
 };
 
 template<typename real_scalar_t>
