@@ -68,8 +68,8 @@ public:
         m_dm_T_kron_dm_T = kron(trans(m_dup_mat_m), trans(m_dup_mat_m));
         m_mat_I_m = identity_matrix<real_scalar_t>(m_mu_fid.size());
         m_mat_I_m2 = identity_matrix<real_scalar_t>(m_mu_fid.size()*m_mu_fid.size());
-        m_mat_P = kron(m_mat_I_m, kron(m_comm_mat_mm, m_mat_I_m) );
-
+        m_Im_kron_Kmm_kron_Im = kron(m_mat_I_m, kron(m_comm_mat_mm, m_mat_I_m) );
+        m_dm_T_kron_dm_T_prod_Im_kron_Kmm_kron_Im = prod(m_dm_T_kron_dm_T, m_Im_kron_Kmm_kron_Im);
     }
 
     ~multivariate_normal(){
@@ -312,7 +312,31 @@ public:
         // compute Sigma^-1 kron Sigma^-1
         real_matrix_t const sig_inv_kron_sig_inv = kron(sigma_inv, sigma_inv);
 
-        real_matrix_t const phi = -real_scalar_t(m_num_data_points)*prod(sig_inv_kron_sig_inv, m_dup_mat_m);
+        // compute the matrix theta
+        real_matrix_t const theta
+            = -real_scalar_t(m_num_data_points)*prod(sig_inv_kron_sig_inv, m_dup_mat_m);
+
+        // compute vec(Sigma^-1)
+        real_matrix_t const vec_sigma_inv
+            = real_matrix_t(sigma.size1()*sigma.size2(), std::size_t(1));
+        std::size_t ind_vsi=0;
+        for(std::size_t dim_j = 0; dim_j < sigma_inv.size1(); ++dim_j){
+            for(std::size_t dim_i = 0; dim_i < sigma_inv.size2(); ++dim_i){
+                vec_sigma_inv(ind_vsi,0) = vec_sigma_inv(dim_i, dim_j);
+                ++ind_vsi;
+            }
+        }
+
+        // compute I_m2 kron vec(Sigma^-1) + vec(Sigma^-1) kron I_m2
+        real_matrix_t Im2_kron_vec_sig_inv_plus_vec_sig_inv_kron_Im2
+            = kron(m_mat_I_m2, vec_sigma_inv);
+        Im2_kron_vec_sig_inv_plus_vec_sig_inv_kron_Im2
+            += kron(vec_sigma_inv, m_mat_I_m2);
+
+        real_matrix_t temp_mat_1
+            = -real_scalar_t(0.5)*m_dm_T_kron_dm_T_prod_Im_kron_Kmm_kron_Im;
+        real_matrix_t temp_mat_2
+            = prod(Im2_kron_vec_sig_inv_plus_vec_sig_inv_kron_Im2, theta);
 
         real_matrix_array_t der_mtrc_tnsr_G( arg_x.size(), zero_matrix<real_scalar_t>( arg_x.size(), arg_x.size() ) );
 
@@ -404,7 +428,8 @@ private:
     real_matrix_t m_dup_mat_mm;
     real_matrix_t m_comm_mat_mm;
     real_matrix_t m_dm_T_kron_dm_T;
-    real_matrix_t m_mat_P;
+    real_matrix_t m_Im_kron_Kmm_kron_Im;
+    real_matrix_t m_dm_T_kron_dm_T_prod_Im_kron_Kmm_kron_Im
     real_matrix_t m_mat_I_m;
     real_matrix_t m_mat_I_m2;
 };
