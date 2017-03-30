@@ -40,3 +40,8 @@ add_compute_test(
         "hamiltonian.multi_var_norm_as_invar_dens_rmhmc"
         multi_var_norm_as_invar_dens_rmhmc.cpp
 )
+
+add_compute_test(
+        "hamiltonian.var_est_with_gaussian_noise"
+        var_est_with_gaussian_noise.cpp
+)
