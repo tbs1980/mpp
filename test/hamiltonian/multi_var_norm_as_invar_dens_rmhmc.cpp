@@ -333,11 +333,16 @@ public:
         Im2_kron_vec_sig_inv_plus_vec_sig_inv_kron_Im2
             += kron(vec_sigma_inv, m_mat_I_m2);
 
+        // compute phi
         real_matrix_t temp_mat_1
             = -real_scalar_t(0.5)*m_dm_T_kron_dm_T_prod_Im_kron_Kmm_kron_Im;
         real_matrix_t temp_mat_2
             = prod(Im2_kron_vec_sig_inv_plus_vec_sig_inv_kron_Im2, theta);
+        real_matrix_t phi = prod(temp_mat_1, temp_mat_2);
 
+        // theta has the size of m^2 x m(m+1)/2
+        // phi has the size of m^2(m+1)^2/4 x m(m+1)/2
+        // so we need to copy these into the correct places in the 3-D array
         real_matrix_array_t der_mtrc_tnsr_G( arg_x.size(), zero_matrix<real_scalar_t>( arg_x.size(), arg_x.size() ) );
 
         return der_mtrc_tnsr_G;
