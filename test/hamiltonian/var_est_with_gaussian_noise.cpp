@@ -9,6 +9,11 @@
 #include <cstddef>
 #include <random>
 #include <cmath>
+#include <functional>
+#include <iostream>
+#include <string>
+
+#include <mpp/hamiltonian/reimann_manifold_hmc.hpp>
 
 template<class _real_scalar_t>
 class variance_estimation {
@@ -105,7 +110,7 @@ public:
         for(std::size_t i = 0; i < m_n; ++i) {
             d_z(i) = d_x(i);
         }
-        d_x(m_n) = d_omega;
+        d_z(m_n) = d_omega;
 
         return d_z;
     }
@@ -122,9 +127,7 @@ public:
         // assign the top right block of the metric tensor
         real_matrix_t G = zero_matrix<real_scalar_t>(m_n+1 ,m_n+1);
         for(std::size_t i = 0; i < m_n; ++i) {
-            for(std::size_t j = 0; j< m_n; ++j){
-                G(i,j) = (1./m_zeta + 1./omega);
-            }
+            G(i,i) = (1./m_zeta + 1./omega);
         }
         // assign the bottom left blcok of the metric tensor
         G(m_n,m_n) = 0.5*static_cast<real_scalar_t>(m_n)/omega/omega;
@@ -158,15 +161,79 @@ private:
 };
 
 template<typename real_scalar_t>
-void test_var_est_gaussian_noise(){
+void test_var_est_gaussian_noise(std::string const & chn_file_name){
+    using namespace boost::numeric::ublas;
+    using namespace mpp::hamiltonian;
+    using namespace mpp::chains;
 
-    std::size_t const n = 1000;
+    typedef rm_hmc_sampler<real_scalar_t> rm_hmc_sampler_t;
+    typedef typename rm_hmc_sampler_t::log_post_func_t log_post_func_t;
+    typedef typename rm_hmc_sampler_t::grad_log_post_func_t
+        grad_log_post_func_t;
+    typedef typename rm_hmc_sampler_t::mtr_tnsr_log_post_func_t
+        mtr_tnsr_log_post_func_t;
+    typedef typename rm_hmc_sampler_t::der_mtr_tnsr_log_post_func_t
+        der_mtr_tnsr_log_post_func_t;
+    typedef variance_estimation<real_scalar_t> var_est_t;
+    typedef std::mt19937 rng_t;
+    typedef boost::numeric::ublas::vector<real_scalar_t> real_vector_t;
+    typedef mcmc_chain<real_scalar_t> chain_t;
+
+    // define the posterior distribution
+    std::size_t const n = 10;
     real_scalar_t const omega(1.);
-    real_scalar_t const zeta(1.);
+    real_scalar_t const zeta(0.01);
     std::size_t const seed = 31415;
-    variance_estimation<real_scalar_t> var_est(n, omega, zeta, seed);
+    var_est_t var_est(n, omega, zeta, seed);
+
+    // create the functors for RMHMC
+    using std::placeholders::_1;
+    log_post_func_t log_posterior
+        = std::bind (&var_est_t::log_posterior, &var_est, _1);
+    grad_log_post_func_t grad_log_posterior
+        = std::bind (&var_est_t::grad_log_posterior, &var_est, _1);
+    mtr_tnsr_log_post_func_t metric_tensor_log_posterior = std::bind (
+            &var_est_t::metric_tensor_log_posterior,
+            &var_est,
+            _1
+    );
+    der_mtr_tnsr_log_post_func_t deriv_metric_tensor_log_posterior = std::bind(
+            &var_est_t::deriv_metric_tensor_log_posterior,
+            &var_est,
+            _1
+    );
+
+    // define the sampler
+    std::size_t const num_leap_frog_steps = 5;
+    std::size_t const num_fixed_point_steps = 5;
+    real_scalar_t const step_size = 0.75;
+    std::size_t const num_dims = n + 1;
+    rm_hmc_sampler_t rm_hmc_spr(
+            log_posterior,
+            grad_log_posterior,
+            metric_tensor_log_posterior,
+            deriv_metric_tensor_log_posterior,
+            num_dims,
+            step_size,
+            num_leap_frog_steps,
+            num_fixed_point_steps
+    );
+
+    // define the number samples required and starting point
+    size_t const num_samples(1000);
+    real_vector_t x_0(num_dims);
+    for(std::size_t i = 0; i < num_dims - 1; ++i){
+        x_0(i) = 0.;
+    }
+    x_0(num_dims - 1) = 1.;
+    rng_t rng;
+    chain_t chn = rm_hmc_spr.run_sampler(num_samples, x_0, rng);
+    std::cout << "acc rate = " << rm_hmc_spr.acc_rate() << std::endl;
+    chn.write_samples_to_csv(chn_file_name);
 }
 
 BOOST_AUTO_TEST_CASE(variance_estimation_gaussian_noise) {
-    test_var_est_gaussian_noise<float>();
+    test_var_est_gaussian_noise<float>(
+        std::string("var_est_gauss_noise_float.chain")
+    );
 }
