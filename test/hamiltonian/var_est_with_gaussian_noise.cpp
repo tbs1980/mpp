@@ -34,7 +34,7 @@ public:
         using namespace boost::numeric::ublas;
 
         BOOST_ASSERT(arg_n > 0);
-        BOOST_ASSERT(arg_omega > 0);
+        BOOST_ASSERT(arg_omega >= real_scalar_t(0));
         BOOST_ASSERT(arg_zeta > 0);
         m_n = arg_n;
         m_zeta = arg_zeta;
@@ -61,8 +61,15 @@ public:
         real_vector_t x(m_n);
         for(std::size_t i = 0; i < m_n; ++i){
             x(i) = arg_z(i);
+            if(std::isfinite(x(i)) == false){
+                return -1e90;
+            }
         }
         real_scalar_t omega = arg_z(m_n);
+        // BOOST_ASSERT(omega > real_scalar_t(0));
+        if(omega <= real_scalar_t(0)){
+            return -1e90;
+        }
 
         // compute the log posterior
         real_scalar_t log_y_x(0);
@@ -71,12 +78,14 @@ public:
             log_y_x -= diff*diff;
         }
         log_y_x /= (2.*m_zeta);
+        BOOST_ASSERT(std::isfinite(log_y_x));
         real_scalar_t log_x_omega(0);
         for(std::size_t i = 0; i < m_n; ++i) {
             log_x_omega -= x(i)*x(i);
         }
         log_x_omega /= (2.*omega);
         log_x_omega -= 0.5*static_cast<real_scalar_t>(m_n)*std::log(omega);
+        BOOST_ASSERT(std::isfinite(log_x_omega));
 
         return log_y_x + log_x_omega;
     }
@@ -182,7 +191,7 @@ void test_var_est_gaussian_noise(std::string const & chn_file_name){
     // define the posterior distribution
     std::size_t const n = 10;
     real_scalar_t const omega(1.);
-    real_scalar_t const zeta(0.01);
+    real_scalar_t const zeta(1.);
     std::size_t const seed = 31415;
     var_est_t var_est(n, omega, zeta, seed);
 
