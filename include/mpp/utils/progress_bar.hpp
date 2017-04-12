@@ -8,7 +8,7 @@
 
 namespace mpp { namespace utils {
 
-inline void loadbar(std::size_t x, std::size_t n, std::size_t w = 50)
+inline void load_progress_bar(std::size_t x, std::size_t n, std::size_t w = 50)
 {
     // http://www.ross.click/2011/02/creating-a-progress-bar-in-c-or-any-other-console-app/
     if(x % std::size_t(100) == 0) {

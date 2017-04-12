@@ -8,6 +8,6 @@
 BOOST_AUTO_TEST_CASE(progress_bar) {
     std::size_t const max_iter = 1000;
     for(std::size_t i = 0; i < max_iter; ++i){
-        mpp::utils::loadbar(i,max_iter);
+        mpp::utils::load_progress_bar(i,max_iter);
     }
 }

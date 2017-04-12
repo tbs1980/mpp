@@ -11,6 +11,7 @@
 #include <boost/multi_array.hpp>
 #include "../config.hpp"
 #include "../utils/lin_alg_utils.hpp"
+#include "../utils/progress_bar.hpp"
 #include "../chains/mcmc_chain.hpp"
 
 namespace mpp{ namespace hamiltonian {
@@ -169,6 +170,7 @@ public:
                 real_scalar_t log_post_val = m_log_posterior(q_1);
                 rmhmc_chain.set_sample(num_accepted,q_1,log_post_val);
                 ++num_accepted;
+                load_progress_bar(num_accepted, num_samples);
             }
             else {
                 ++num_rejected;
