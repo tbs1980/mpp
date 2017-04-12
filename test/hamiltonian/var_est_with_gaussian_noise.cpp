@@ -43,10 +43,14 @@ public:
         rng_t rng(arg_seed);
         normal_distribution_t nrm_dist(0., 1.);
         m_y = real_vector_t(arg_n);
+        real_scalar_t sum_y_2(0);
         for(std::size_t i=0; i<arg_n; ++i){
-            m_y(i) = std::sqrt(arg_omega)*nrm_dist(rng)
-                + std::sqrt(arg_zeta)*nrm_dist(rng);
+            // m_y(i) = std::sqrt(arg_omega)*nrm_dist(rng)
+            //     + std::sqrt(arg_zeta)*nrm_dist(rng);
+            m_y(i) = std::sqrt(arg_omega  + arg_zeta)*nrm_dist(rng);
+            sum_y_2 += m_y(i)*m_y(i);
         }
+        std::cout << "sum y_i^2 = " << sum_y_2 << std::endl;
 
     }
 
@@ -189,7 +193,7 @@ void test_var_est_gaussian_noise(std::string const & chn_file_name){
     typedef mcmc_chain<real_scalar_t> chain_t;
 
     // define the posterior distribution
-    std::size_t const n = 10;
+    std::size_t const n = 20;
     real_scalar_t const omega(1.);
     real_scalar_t const zeta(1.);
     std::size_t const seed = 31415;
