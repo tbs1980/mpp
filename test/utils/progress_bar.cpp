@@ -10,4 +10,5 @@ BOOST_AUTO_TEST_CASE(progress_bar) {
     for(std::size_t i = 0; i < max_iter; ++i){
         mpp::utils::load_progress_bar(i,max_iter);
     }
+    std::cout << "done progress_bar" << std::endl;
 }

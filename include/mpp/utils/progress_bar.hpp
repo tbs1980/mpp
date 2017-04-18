@@ -21,12 +21,18 @@ inline void load_progress_bar(std::size_t x, std::size_t n, std::size_t w = 50)
     std::cout << std::setw(3) << (int)(ratio*100) << "% [";
 
     for (std::size_t x = 0; x < c; x++){
-        std::cout << "=";
+        std::cout << "-";
     }
     for (std::size_t x = c; x < w; x++){
         std::cout << " ";
     }
-    std::cout << "]\r" << std::flush;
+    
+    if(x != n-1){
+        std::cout << "]\r" << std::flush;
+    }
+    else {
+        std::cout << "]\n" << std::flush;
+    }
 }
 
 
