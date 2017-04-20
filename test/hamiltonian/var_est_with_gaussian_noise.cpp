@@ -14,6 +14,7 @@
 #include <string>
 
 #include <mpp/hamiltonian/reimann_manifold_hmc.hpp>
+#include <mpp/ensemble/red_blue.hpp>
 
 template<class _real_scalar_t>
 class variance_estimation {
@@ -245,8 +246,64 @@ void test_var_est_gaussian_noise(std::string const & chn_file_name){
     chn.write_samples_to_csv(chn_file_name);
 }
 
+template<typename real_scalar_t>
+void test_var_est_gaussian_noise_ensemble(std::string const & chn_file_name) {
+    using namespace boost::numeric::ublas;
+    using namespace mpp::ensemble;
+    using namespace mpp::chains;
+
+    typedef red_blue_sampler<real_scalar_t> rb_sampler_t;
+    typedef typename rb_sampler_t::log_post_func_type log_post_func_t;
+    typedef variance_estimation<real_scalar_t> var_est_t;
+    typedef matrix<real_scalar_t> real_matrix_t;
+    typedef std::mt19937 rng_t;
+    typedef mcmc_chain<real_scalar_t> chain_t;
+    typedef std::normal_distribution<real_scalar_t> normal_distribution_t;
+
+    // define the posterior distribution
+    std::size_t const n = 20;
+    real_scalar_t const omega(3.);
+    real_scalar_t const zeta(1.);
+    std::size_t const seed = 31415;
+    var_est_t var_est(n, omega, zeta, seed);
+
+    // create the functors for RMHMC
+    using std::placeholders::_1;
+    log_post_func_t log_posterior
+        = std::bind (&var_est_t::log_posterior, &var_est, _1);
+
+    size_t const num_dims = n + 1;
+    std::size_t const num_walkers = 2*num_dims;
+    real_scalar_t const scale_a = 2;
+
+    rb_sampler_t rb_spr(
+        log_posterior,
+        num_dims,
+        num_walkers,
+        scale_a
+    );
+
+    size_t const num_samples(2000);
+    real_matrix_t start_ensemble(num_walkers, num_dims);
+    rng_t rng;
+    normal_distribution_t nrm_dist(0., 1.);
+    for(std::size_t i=0; i < num_walkers; ++i) {
+        for(std::size_t j = 0; j < num_dims - 1; ++j) {
+            start_ensemble(i, j) = nrm_dist(rng);
+        }
+        start_ensemble(i, num_dims - 1) = 1. + 0.1*nrm_dist(rng);
+    }
+    chain_t chn = rb_spr.run_sampler(num_samples,start_ensemble,rng);
+    chn.write_samples_to_csv(chn_file_name);
+
+
+}
 BOOST_AUTO_TEST_CASE(variance_estimation_gaussian_noise) {
-    test_var_est_gaussian_noise<float>(
-        std::string("var_est_gauss_noise_float.chain")
+    // test_var_est_gaussian_noise<float>(
+    //     std::string("var_est_gauss_noise_float.chain")
+    // );
+
+    test_var_est_gaussian_noise_ensemble<float>(
+        std::string("var_est_gauss_noise_ensemble_float.chain")
     );
 }

@@ -16,6 +16,7 @@
 #include <boost/assert.hpp>
 #include "../config.hpp"
 #include "../chains/mcmc_chain.hpp"
+#include "../utils/progress_bar.hpp"
 
 namespace mpp{ namespace ensemble{
 
@@ -98,6 +99,7 @@ public:
         rng_type & rng
     ) {
         using namespace boost::numeric::ublas;
+        using namespace mpp::utils;
         BOOST_ASSERT_MSG(
             start_points.size1() == m_num_walkers,
             "Number of rows should be equal to the number of walkers."
@@ -161,6 +163,7 @@ public:
                         if( wkr_k == 0){
                             rb_chain.set_sample(num_accepted,prop_Y,lp_prop_Y);
                             ++num_accepted;
+                            load_progress_bar(num_accepted, num_samples);
                         }
                     }
                     else{
