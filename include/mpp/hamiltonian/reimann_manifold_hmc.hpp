@@ -169,8 +169,8 @@ public:
                 q_1 = q_0;
                 real_scalar_t log_post_val = m_log_posterior(q_1);
                 rmhmc_chain.set_sample(num_accepted,q_1,log_post_val);
-                ++num_accepted;
                 load_progress_bar(num_accepted, num_samples);
+                ++num_accepted;
             }
             else {
                 ++num_rejected;

@@ -50,3 +50,8 @@ add_compute_test(
         "hamiltonian.var_est_with_gaussian_noise_ana_conv"
         var_est_with_gaussian_noise_ana_conv.cpp
 )
+
+add_compute_test(
+        "hamiltonian.var_est_with_gauss_noise_change_of_vars"
+        var_est_with_gauss_noise_change_of_vars.cpp
+)
