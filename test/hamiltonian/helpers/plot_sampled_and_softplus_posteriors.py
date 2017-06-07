@@ -8,7 +8,7 @@ def analytical_posterior(omega, zeta, sum_y2, n):
 
 zeta = 1.
 omega_true = 20.
-sum_y2 = 226.633
+sum_y2 = 471.218
 n = 20
 omega_min = 0
 omega_max = 100
@@ -23,7 +23,8 @@ nrm = integrate.quad(analytical_posterior, a=omega_min, b=omega_max, args=(zeta,
 
 plt.plot(omega, post/nrm[0])
 
-chain = np.loadtxt('../../../build/var_est_gauss_noise_softplus_float.chain', delimiter=',')
+chain = np.loadtxt('../../../build/var_est_gauss_noise_oftplus_ensemble_float.chain', delimiter=',')
 
-plt.hist(np.log(1+ np.exp(chain[:,21])),histtype='step', range=(0,100), normed=True, bins=20)
+plt.hist(np.log(1+ np.exp(chain[1000:3000,21])),histtype='step',
+    range=(omega_min, omega_max), normed=True, bins=20)
 plt.show()
