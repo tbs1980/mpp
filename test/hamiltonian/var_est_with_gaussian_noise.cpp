@@ -262,7 +262,7 @@ void test_var_est_gaussian_noise_ensemble(std::string const & chn_file_name) {
 
     // define the posterior distribution
     std::size_t const n = 20;
-    real_scalar_t const omega(3.);
+    real_scalar_t const omega(20.);
     real_scalar_t const zeta(1.);
     std::size_t const seed = 31415;
     var_est_t var_est(n, omega, zeta, seed);

@@ -87,6 +87,7 @@ public:
         }
         log_x_omega /= (2.*omega);
         log_x_omega -= 0.5*static_cast<real_scalar_t>(m_n)*std::log(omega);
+        // std::cout << "log_x_omega = " << log_x_omega << std::endl;
         BOOST_ASSERT(std::isfinite(log_x_omega));
         real_scalar_t const log_nu_omega =  std::log(1. - std::exp(-omega));
         BOOST_ASSERT(std::isfinite(log_nu_omega));
@@ -203,8 +204,8 @@ void test_var_est_gaussian_noise_softplus(std::string const & chn_file_name){
 
     // define the posterior distribution
     std::size_t const n = 20;
-    real_scalar_t const omega(3.);
-    real_scalar_t const zeta(1.);
+    real_scalar_t const omega(10);
+    real_scalar_t const zeta(1e-2);
     std::size_t const seed = 31415;
     var_est_sp_t var_est_sp(n, omega, zeta, seed);
 
@@ -228,7 +229,7 @@ void test_var_est_gaussian_noise_softplus(std::string const & chn_file_name){
     // define the sampler
     std::size_t const num_leap_frog_steps = 5;
     std::size_t const num_fixed_point_steps = 5;
-    real_scalar_t const step_size = 0.75;
+    real_scalar_t const step_size = 0.2;
     std::size_t const num_dims = n + 1;
     rm_hmc_sampler_t rm_hmc_spr(
             log_posterior,
