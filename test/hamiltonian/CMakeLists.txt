@@ -55,3 +55,8 @@ add_compute_test(
         "hamiltonian.var_est_with_gauss_noise_change_of_vars"
         var_est_with_gauss_noise_change_of_vars.cpp
 )
+
+add_compute_test(
+        "hamiltonian.var_est_with_gaussian_noise_softplus"
+        var_est_with_gaussian_noise_softplus.cpp
+)
